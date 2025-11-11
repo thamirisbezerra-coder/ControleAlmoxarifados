@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Almoxarifado</title>
+    <!-- Carregando o Tailwind CSS para um design moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Importando ícones para a UI -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <style>
+        /* Estilo para a fonte Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f6; /* Um cinza bem claro para o fundo */
+        }
+        /* Estilo para a barra de rolagem */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+        /* Classe para item da lista selecionado */
+        .selected {
+            background-color: #e0f2fe !important; /* Azul claro */
+            border-right: 4px solid #0284c7; /* Borda azul escura */
+        }
+    </style>
+</head>
+<body class="overflow-x-hidden">
+
+    <!-- Container Principal -->
+    <div class="flex flex-col min-h-screen">
+        
+        <!-- Cabeçalho -->
+        <header class="bg-white shadow-md w-full z-10">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-20">
+                    <h1 class="text-3xl font-bold text-gray-800">
+                        <ion-icon name="grid-outline" class="mr-2 -mt-1"></ion-icon>
+                        Controle de Almoxarifado
+                    </h1>
+                    
+                    <!-- Container de navegação e sino movido para baixo -->
+                </div>
+            </div>
+        </header>
+
+        <!-- Nova Barra de Navegação e Notificações -->
+        <div class="bg-white shadow-sm w-full z-0 border-t border-gray-100">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-center items-center py-3">
+                 <!-- Container para agrupar navegação e sino à direita (MOVIDO E CENTRALIZADO) -->
+                 <div class="flex items-center space-x-6">
+                    <!-- Botões de Navegação do Almoxarifado -->
+                    <nav id="warehouse-tabs" class="flex space-x-2 shadow-sm rounded-lg p-1 bg-gray-100">
+                        <button data-warehouse="doces" class="warehouse-tab px-4 py-2 text-sm font-semibold rounded-md transition-colors duration-200">Aromas Doces</button>
+                        <button data-warehouse="salgados" class="warehouse-tab px-4 py-2 text-sm font-semibold rounded-md transition-colors duration-200">Aromas Salgados</button>
+                        <button data-warehouse="materiaPrima" class="warehouse-tab px-4 py-2 text-sm font-semibold rounded-md transition-colors duration-200">Matéria Prima</button>
+                        <!-- NOVO BOTÃO DE RELATÓRIO -->
+                        <button data-warehouse="relatorio" class="warehouse-tab px-4 py-2 text-sm font-semibold rounded-md transition-colors duration-200">Relatório de Retiradas</button>
+                    </nav>
+
+                    <!-- NOVO: Ícone de Sino de Notificação (baseado na imagem) -->
+                    <div id="notification-bell-container" class="relative text-gray-600 hover:text-blue-600 cursor-pointer">
+                        <ion-icon name="notifications-outline" class="text-3xl"></ion-icon>
+                        <!-- Ponto vermelho da notificação (controlado via JS) -->
+                        <span id="notification-dot" class="absolute top-0 right-0 block h-3 w-3 hidden">
+                            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Área de Conteúdo Principal -->
+        <main class="flex-grow container mx-auto p-4 sm:p-6 lg:p-8 mt-4">
+
+            <!-- Container para a visualização principal (Inventário) -->
+            <div id="main-content-area">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+
+                    <!-- Coluna da Esquerda: Lista de Itens -->
+                    <div class="lg:col-span-1 bg-white rounded-lg shadow-lg overflow-hidden flex flex-col" style="height: calc(100vh - 150px);">
+                        <!-- Barra de Busca -->
+                        <div class="p-4 border-b">
+                            <div class="relative">
+                                <input type="text" id="search-bar" class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Buscar por aroma, código ou lote...">
+                                <ion-icon name="search-outline" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></ion-icon>
+                            </div>
+                        </div>
+                        <!-- Lista de Itens com Rolagem -->
+                        <div id="item-list" class="overflow-y-auto flex-grow">
+                            <!-- Itens serão inseridos aqui pelo JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Coluna da Direita: Detalhes do Item -->
+                    <div id="item-details" class="lg:col-span-2 bg-white rounded-lg shadow-lg p-6" style="height: calc(100vh - 150px); overflow-y: auto;">
+                        <!-- Conteúdo dos detalhes será inserido aqui -->
+                        <div id="details-placeholder" class="flex flex-col items-center justify-center h-full text-gray-500 text-center">
+                            <ion-icon name="cube-outline" class="text-8xl text-gray-400"></ion-icon>
+                            <p class="mt-4 text-2xl font-semibold text-gray-700">Bem-vindo ao Controle de Almoxarifado</p>
+                            <p class="mt-2 text-lg text-gray-600">Selecione um item da lista à esquerda para começar.</p>
+                
+                            <!-- NOVAS Orientações -->
+                            <div class="mt-10 pt-6 border-t w-full max-w-lg text-left">
+                                <h3 class="text-lg font-semibold text-gray-700 mb-3">Orientações Rápidas:</h3>
+                                <ul class="list-disc list-inside space-y-2 text-gray-600">
+                                    <li><strong>Ver Detalhes:</strong> Clique em um item na lista (ex: "Abacaxi") para ver seus lotes.</li>
+                                    <li><strong>Adicionar Lote:</strong> Após selecionar um item, clique no botão "Adicionar Lote".</li>
+                                    <li><strong>Retirar Estoque:</strong> Clique no botão "Retirar" em um lote específico.</li>
+                                    <li><strong>Ver Relatório:</strong> Use a aba "Relatório de Retiradas" no menu acima para ver todo o histórico.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- NOVA ÁREA: Container para a visualização de Relatório (escondido por padrão) -->
+            <div id="report-area" class="hidden">
+                <div class="bg-white rounded-lg shadow-lg p-6" style="height: calc(100vh - 150px); overflow-y: auto;">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Histórico de Retiradas</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full w-full text-sm text-left text-gray-600">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-3">Data/Hora da Retirada</th>
+                                    <th class="px-4 py-3">Solicitante</th>
+                                    <th class="px-4 py-3">Produto (Aroma)</th>
+                                    <th class="px-4 py-3">Lote</th>
+                                    <th class="px-4 py-3">Quantidade Retirada</th>
+                                </tr>
+                            </thead>
+                            <tbody id="withdrawal-history-table-body">
+                                <!-- Linhas do histórico serão inseridas aqui -->
+                                <tr>
+                                    <td colspan="5" class="text-center p-6 text-gray-400">
+                                        Nenhuma retirada registrada ainda.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para Adicionar Novo Lote -->
+    <div id="add-lot-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md transform transition-all scale-95 opacity-0" id="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Adicionar Novo Lote</h2>
+                <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800">
+                    <ion-icon name="close-outline" class="text-3xl"></ion-icon>
+                </button>
+            </div>
+            <form id="add-lot-form">
+                <div class="space-y-4">
+                    <div>
+                        <label for="lote-id" class="block text-sm font-medium text-gray-700 mb-1">Código do Lote *</label>
+                        <input type="text" id="lote-id" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: AB3026">
+                    </div>
+                    <div>
+                        <label for="lote-validade" class="block text-sm font-medium text-gray-700 mb-1">Data de Validade *</label>
+                        <input type="date" id="lote-validade" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label for="lote-estoque" class="block text-sm font-medium text-gray-700 mb-1">Estoque Atual *</label>
+                        <input type="text" id="lote-estoque" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: 250 ml">
+                    </div>
+                    <div>
+                        <label for="lote-status" class="block text-sm font-medium text-gray-700 mb-1">Status do Estoque *</label>
+                        <select id="lote-status" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="OK">OK</option>
+                            <option value="Baixo">Baixo</option>
+                            <option value="Crítico">Crítico</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-8 flex justify-end">
+                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200 flex items-center">
+                        <ion-icon name="save-outline" class="mr-2"></ion-icon>
+                        Salvar Lote
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Retirar Estoque -->
+    <div id="withdraw-stock-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md transform transition-all scale-95 opacity-0" id="withdraw-modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Retirar Estoque</h2>
+                <button id="close-withdraw-modal-btn" class="text-gray-500 hover:text-gray-800">
+                    <ion-icon name="close-outline" class="text-3xl"></ion-icon>
+                </button>
+            </div>
+            <form id="withdraw-stock-form">
+                <input type="hidden" id="withdraw-item-codigo">
+                <input type="hidden" id="withdraw-lote-id">
+                
+                <div class="mb-4 p-4 bg-gray-100 rounded-lg">
+                    <p class="text-sm font-medium text-gray-600">Item:</p>
+                    <p class="text-lg font-semibold text-gray-900" id="withdraw-item-name">Nome do Aroma</p>
+                    <p class="text-sm text-gray-600 mt-1">Lote: <span class="font-medium text-gray-900" id="withdraw-lote-name"></span></p>
+                </div>
+
+                <div class="mb-4">
+                    <p class="text-sm font-medium text-gray-600">Estoque Atual:</p>
+                    <p class="text-2xl font-bold text-blue-600" id="withdraw-current-stock">1000 ml</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="withdraw-amount" class="block text-sm font-medium text-gray-700 mb-1">Quantidade a Retirar *</label>
+                        <div class="relative">
+                            <input type="number" step="any" id="withdraw-amount" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: 50">
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" id="withdraw-unit-label">ml</span>
+                        </div>
+                    </div>
+                    <!-- NOVO CAMPO: NOME DO SOLICITANTE -->
+                    <div>
+                        <label for="withdraw-name" class="block text-sm font-medium text-gray-700 mb-1">Nome do Solicitante *</label>
+                        <input type="text" id="withdraw-name" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: João Silva">
+                    </div>
+                </div>
+                <div class="mt-8 flex justify-end">
+                    <button type="submit" class="bg-yellow-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-yellow-700 transition-colors duration-200 flex items-center">
+                        <ion-icon name="remove-circle-outline" class="mr-2"></ion-icon>
+                        Confirmar Retirada
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Container de Notificações (Toast) -->
+    <div id="notification-container" class="fixed top-20 right-5 z-50 space-y-3">
+        <!-- Notificações serão adicionadas aqui -->
+    </div>
+
+
+    <script>
+        // --- ESTRUTURA DE DADOS INICIAL ---
+        // Dados extraídos do seu CSV "Aromas Doces"
+        const csvData = `1.1,A - B,1,Abacaxi,Líquido,AB2025,10/05/2026,200 ml,OK
+1.1,A - B,2,Amora,Líquido,AM0925,22/11/2026,150 ml,OK
+1.1,A - B,3,Baunilha (Essência Clássica),Líquido,BA1125,15/03/2026,350 ml,Baixo
+1.2,C,4,Café,Líquido,CF0725,20/09/2026,180 ml,OK
+1.2,C,5,Caramelo,Líquido,CA0524,20/07/2025,120 ml,Crítico
+1.3,D - E,6,Damasco,Líquido,DA0326,10/06/2027,100 ml,OK
+1.4,F - H,7,Framboesa,Líquido,FR0326,05/06/2027,80 ml,Baixo
+1.4,F - H,8,Groselha,Líquido,GO0525,15/07/2026,120 ml,OK
+1.5,I - L,9,Laranja,Líquido,LA0725,20/09/2026,200 ml,OK
+1.5,I - L,10,Limão,Líquido,LI0225,01/04/2026,250 ml,OK
+1.5,I - L,11,Limão Siciliano,Líquido,LS0225,01/04/2026,250 ml,OK
+1.6,M - N,12,Maracujá,Líquido,MR1025,22/10/2026,300 ml,OK
+1.6,M - N,13,Mel,Líquido,ME0825,19/11/2026,150 ml,OK
+1.6,M - N,14,Morango,Líquido,MO0825,22/10/2026,300 ml,Baixo
+1.7,O - P,15,Pêssego,Líquido,PE0425,09/05/2026,180 ml,OK
+1.7,O - P,16,Pêssego em Calda,Líquido,PC0425,09/05/2026,180 ml,OK
+1.8,Q - R,17,Rum,Líquido,RU0624,12/09/2025,90 ml,Baixo
+1.9,S - Z,18,Tutti-Frutti,Líquido,TF0126,28/02/2027,50 ml,Crítico
+2.1,A - B,19,Amêndoa,Pasta,AM1125,15/01/2027,500 g,OK
+2.1,A - B,20,Avelã,Pasta,AV1025,20/12/2026,400 g,OK
+2.2,C,21,Chocolate,Pasta,CH0326,10/06/2027,1 kg,Baixo
+2.3,D - E,22,Doce de Leite,Pasta,DL0126,25/03/2027,800 g,OK
+2.4,F - H,23,Pistache,Pasta,PI0925,18/11/2026,300 g,Crítico
+2.5,I - L,24,Leite Condensado,Pasta,LC0226,05/04/2027,1.5 kg,OK
+2.6,M - N,25,Ninho,Pasta,NI0825,20/10/2026,600 g,OK
+2.7,S - Z,26,Chocolate Branco,Pasta,CB0725,15/09/2026,1 kg,Baixo
+3.1,A - B,27,Baunilha (Pó),Pó,BA0525P,10/08/2026,500 g,OK
+3.2,C,28,Canela,Pó,CA0126P,30/03/2027,200 g,OK
+3.2,C,29,Coco Ralado,Pó,CO0925P,25/11/2026,700 g,Baixo
+3.3,F - H,30,Leite em Pó,Pó,LE0425P,15/07/2026,2 kg,Crítico`;
+
+        /**
+         * Helper: Converte string de estoque (ex: "200 ml") em objeto.
+         */
+        function parseStock(stockString) {
+            stockString = String(stockString).trim();
+            const match = stockString.match(/^([\d\.,]+)\s*(\w+)$/);
+            if (match) {
+                const value = parseFloat(match[1].replace(',', '.'));
+                const unit = match[2];
+                return { value: value, unit: unit };
+            }
+            // Fallback para caso seja só um número
+            const valueOnly = parseFloat(stockString.replace(',', '.'));
+            if (!isNaN(valueOnly)) {
+                 return { value: valueOnly, unit: 'un' }; // Unidade padrão
+            }
+            return { value: 0, unit: 'un' };
+        }
+
+        /**
+         * Helper: Formata objeto de estoque de volta para string.
+         */
+        function formatStock(stockObj) {
+            if (!stockObj || stockObj.value === undefined) return "N/D";
+            // Formata o número para ter no máximo 2 casas decimais se for float
+            const formattedValue = Number.isInteger(stockObj.value) 
+                ? stockObj.value 
+                : stockObj.value.toFixed(2);
+            return `${formattedValue} ${stockObj.unit}`;
+        }
+
+        /**
+         * Função para processar o CSV e agrupar lotes por aroma.
+         * Cada aroma agora é um objeto com 'codigo' (ID) e 'descricao' (Nome).
+         */
+        function parseAndGroupData(csvString) {
+            const groupedFlavors = new Map();
+            const lines = csvString.trim().split('\n');
+
+            for (const line of lines) {
+                const parts = line.split(',');
+                if (parts.length < 9) continue; // Ignora linhas malformadas
+
+                const flavorKey = parts[3].trim(); // "Descrição do Aroma"
+                const flavorCode = parts[2].trim(); // "ID do Aroma (Ref.)"
+                
+                const lotData = {
+                    id: parts[5].trim(), // "Lote"
+                    validade: parts[6].trim(), // "Data de Validade"
+                    estoque: parseStock(parts[7].trim()), // Convertido para objeto
+                    status: parts[8].trim(), // "Status"
+                    retido: false // Novo campo para retenção
+                };
+
+                if (!groupedFlavors.has(flavorCode)) {
+                    // Se é a primeira vez que vemos esse AROMA (pelo código), criamos a entrada principal
+                    groupedFlavors.set(flavorCode, {
+                        codigo: flavorCode,
+                        descricao: flavorKey,
+                        localizacao: parts[0].trim(),
+                        bloco: parts[1].trim(),
+                        formato: parts[4].trim(),
+                        lotes: [lotData] // Adiciona o primeiro lote
+                    });
+                } else {
+                    // Se o aroma já existe, apenas adicionamos o novo lote
+                    groupedFlavors.get(flavorCode).lotes.push(lotData);
+                }
+            }
+
+            // Converte o Map para um Array e ordena lotes por validade
+            const flavorArray = Array.from(groupedFlavors.values());
+            flavorArray.forEach(item => {
+                item.lotes.sort((a, b) => parseDate(a.validade) - parseDate(b.validade));
+            });
+
+            // Ordena a lista principal de aromas por descrição
+            flavorArray.sort((a, b) => a.descricao.localeCompare(b.descricao));
+            
+            return flavorArray;
+        }
+
+        /**
+         * Helper: Converte data DD/MM/AAAA para um objeto Date.
+         */
+        function parseDate(dateString) {
+            const [day, month, year] = dateString.split('/').map(Number);
+            return new Date(year, month - 1, day);
+        }
+
+        // --- ESTADO DA APLICAÇÃO ---
+        const state = {
+            currentWarehouse: 'doces', // 'doces', 'salgados', 'materiaPrima', 'relatorio'
+            selectedFlavorCode: null, // Armazena o CÓDIGO do aroma selecionado
+            searchTerm: '',
+            warehouses: {
+                doces: parseAndGroupData(csvData),
+                salgados: [
+                    // Dados de exemplo para "Salgados". Adicione os seus aqui.
+                    { codigo: 'S1', descricao: 'Aroma de Bacon', formato: 'Pó', localizacao: 'S.1', bloco: 'A-C', lotes: [
+                        { id: 'BCN100', validade: '15/10/2026', estoque: { value: 500, unit: 'g' }, status: 'OK', retido: false }
+                    ]},
+                    { codigo: 'S2', descricao: 'Aroma de Queijo', formato: 'Líquido', localizacao: 'S.2', bloco: 'D-F', lotes: [
+                        { id: 'QJO200', validade: '20/01/2027', estoque: { value: 1, unit: 'L' }, status: 'OK', retido: false }
+                    ]}
+                ],
+                materiaPrima: [
+                    // Dados de exemplo para "Matéria Prima". Adicione os seus aqui.
+                    { codigo: 'MP1', descricao: 'Ácido Cítrico', formato: 'Pó', localizacao: 'MP.1', bloco: 'A-Z', lotes: [
+                        { id: 'AC4500', validade: '01/01/2028', estoque: { value: 25, unit: 'kg' }, status: 'OK', retido: false }
+                    ]}
+                ]
+            },
+            // NOVO ESTADO: Histórico de Retiradas
+            withdrawalHistory: [] // Array para armazenar objetos de retirada
+        };
+
+
+        // --- SELETORES DE DOM ---
+        const warehouseTabs = document.getElementById('warehouse-tabs');
+        const searchBar = document.getElementById('search-bar');
+        const itemListEl = document.getElementById('item-list');
+        const itemDetailsEl = document.getElementById('item-details');
+        const detailsPlaceholder = document.getElementById('details-placeholder');
+
+        // Seletores do Modal (Adicionar Lote)
+        const modal = document.getElementById('add-lot-modal');
+        const modalContent = document.getElementById('modal-content');
+        const addLotForm = document.getElementById('add-lot-form');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const notificationContainer = document.getElementById('notification-container');
+
+        // Seletores do Modal (Retirar Estoque)
+        const withdrawModal = document.getElementById('withdraw-stock-modal');
+        const withdrawModalContent = document.getElementById('withdraw-modal-content');
+        const withdrawStockForm = document.getElementById('withdraw-stock-form');
+        const closeWithdrawModalBtn = document.getElementById('close-withdraw-modal-btn');
+        
+        // NOVOS SELETORES (Visualização Principal vs Relatório)
+        const mainContentArea = document.getElementById('main-content-area');
+        const reportArea = document.getElementById('report-area');
+        const withdrawalHistoryTableBody = document.getElementById('withdrawal-history-table-body');
+
+        // NOVO SELETOR: Ponto de notificação do sino
+        const notificationDot = document.getElementById('notification-dot');
+
+
+        // --- FUNÇÕES DE RENDERIZAÇÃO ---
+
+        /**
+         * Renderiza a lista de itens (aromas) na coluna da esquerda.
+         */
+        function renderItemList() {
+            const items = state.warehouses[state.currentWarehouse];
+            if (!items) {
+                itemListEl.innerHTML = '<p class="p-4 text-gray-500">Almoxarifado não encontrado.</p>';
+                return;
+            }
+
+            itemListEl.innerHTML = ''; // Limpa a lista atual
+
+            const filteredItems = items.filter(item => {
+                const searchTermLower = state.searchTerm.toLowerCase();
+                if (searchTermLower === '') return true; // Mostra tudo se a busca estiver vazia
+
+                // Verifica descrição, código ou IDs de lote
+                if (item.descricao.toLowerCase().includes(searchTermLower)) return true;
+                if (item.codigo.toLowerCase().includes(searchTermLower)) return true;
+                
+                return item.lotes.some(lote => lote.id.toLowerCase().includes(searchTermLower));
+            });
+
+            if (filteredItems.length === 0) {
+                itemListEl.innerHTML = '<p class="p-4 text-gray-500">Nenhum item encontrado.</p>';
+                return;
+            }
+
+            filteredItems.forEach(item => {
+                const isSelected = item.codigo === state.selectedFlavorCode;
+                const itemEl = document.createElement('div');
+                itemEl.className = `flex justify-between items-center p-4 border-b border-gray-200 cursor-pointer hover:bg-gray-50 ${isSelected ? 'selected' : ''}`;
+                
+                // Calcula o status agregado do item
+                const status = getAggregatedStatus(item.lotes);
+
+                itemEl.innerHTML = `
+                    <div class="flex-grow overflow-hidden mr-3">
+                        <p class="text-base font-semibold text-gray-800 truncate" title="${item.descricao}">${item.descricao}</p>
+                        <p class="text-sm text-gray-500">Código: ${item.codigo}</p>
+                    </div>
+                    ${renderStatusBadge(status, true)}
+                `;
+                itemEl.addEventListener('click', () => handleItemSelect(item.codigo));
+                itemListEl.appendChild(itemEl);
+            });
+        }
+
+        /**
+         * Renderiza os detalhes do item selecionado na coluna da direita.
+         */
+        function renderItemDetails() {
+            if (!state.selectedFlavorCode) {
+                detailsPlaceholder.classList.remove('hidden');
+                itemDetailsEl.innerHTML = ''; // Limpa qualquer detalhe antigo
+                itemDetailsEl.appendChild(detailsPlaceholder); // Mostra o placeholder
+                return;
+            }
+
+            detailsPlaceholder.classList.add('hidden'); // Esconde o placeholder
+
+            const item = state.warehouses[state.currentWarehouse].find(
+                i => i.codigo === state.selectedFlavorCode
+            );
+
+            if (!item) {
+                state.selectedFlavorCode = null; // Reseta se o item não for encontrado
+                renderItemDetails(); // Volta ao placeholder
+                return;
+            }
+
+            // Monta a lista de lotes (o HTML da tabela)
+            const lotsHtml = item.lotes.map(lote => {
+                const { statusClass, statusText, statusIcon } = getValidityStatus(lote.validade);
+                const retidoText = lote.retido 
+                    ? '<ion-icon name="lock-open-outline" class="-mb-0.5 mr-1"></ion-icon>Liberar' 
+                    : '<ion-icon name="lock-closed-outline" class="-mb-0.5 mr-1"></ion-icon>Reter';
+
+                return `
+                    <tr class="border-b ${lote.retido ? 'bg-gray-100 opacity-70' : 'bg-white'}">
+                        <td class="px-4 py-3 font-medium text-gray-900">${lote.id}</td>
+                        <td class="px-4 py-3">
+                            <span class="flex items-center ${statusClass}">
+                                <ion-icon name="${statusIcon}" class="mr-2"></ion-icon>
+                                ${lote.validade} (${statusText})
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">${formatStock(lote.estoque)}</td> <!-- Formatando o estoque -->
+                        <td class="px-4 py-3">
+                            ${renderStatusBadge(lote.status)}
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <button data-lote-id="${lote.id}" class="withdraw-btn text-sm font-medium text-blue-600 hover:underline mr-3 ${lote.retido ? 'hidden' : ''}">
+                                <ion-icon name="remove-circle-outline" class="mr-1 -mb-0.5"></ion-icon>Retirar
+                            </button>
+                            <button data-lote-id="${lote.id}" class="toggle-retencao-btn text-sm font-medium ${lote.retido ? 'text-blue-600' : 'text-gray-600'} hover:underline">
+                                ${retidoText}
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Monta o HTML final dos detalhes
+            itemDetailsEl.innerHTML = `
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-900">${item.descricao}</h2>
+                        <p class="text-lg text-gray-500">Código: ${item.codigo}</p>
+                    </div>
+                    <button id="show-add-lot-btn" class="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200 flex items-center shadow">
+                        <ion-icon name="add-circle-outline" class="mr-2"></ion-icon>
+                        Adicionar Lote
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 mb-6 text-sm">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="font-semibold text-gray-500 uppercase text-xs">Localização</p>
+                        <p class="text-lg font-medium text-gray-800">${item.localizacao}</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="font-semibold text-gray-500 uppercase text-xs">Bloco</p>
+                        <p class="text-lg font-medium text-gray-800">${item.bloco}</p>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="font-semibold text-gray-500 uppercase text-xs">Formato</p>
+                        <p class="text-lg font-medium text-gray-800">${item.formato}</p>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Lotes Disponíveis</h3>
+                <div class="overflow-x-auto rounded-lg border">
+                    <table class="min-w-full w-full text-sm text-left text-gray-600">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3">Lote</th>
+                                <th class="px-4 py-3">Validade</th>
+                                <th class="px-4 py-3">Estoque</th>
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            ${lotsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            // Adiciona eventos aos novos botões criados
+            document.getElementById('show-add-lot-btn').addEventListener('click', handleShowAddLotModal);
+            document.querySelectorAll('.toggle-retencao-btn').forEach(btn => {
+                btn.addEventListener('click', () => handleToggleRetencao(btn.dataset.loteId));
+            });
+            document.querySelectorAll('.withdraw-btn').forEach(btn => {
+                btn.addEventListener('click', () => handleShowWithdrawModal(btn.dataset.loteId));
+            });
+        }
+        
+        /**
+         * NOVO: Renderiza a tabela de histórico de retiradas.
+         */
+        function renderReport() {
+            withdrawalHistoryTableBody.innerHTML = ''; // Limpa a tabela
+
+            if (state.withdrawalHistory.length === 0) {
+                withdrawalHistoryTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center p-6 text-gray-400">
+                            Nenhuma retirada registrada ainda.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            state.withdrawalHistory.forEach(entry => {
+                const row = document.createElement('tr');
+                row.className = 'border-b bg-white';
+                row.innerHTML = `
+                    <td class="px-4 py-3 font-medium text-gray-900">${entry.date.toLocaleString('pt-BR')}</td>
+                    <td class="px-4 py-3">${entry.requester}</td>
+                    <td class="px-4 py-3">${entry.itemName}</td>
+                    <td class="px-4 py-3">${entry.loteId}</td>
+                    <td class="px-4 py-3 font-medium">${entry.amount} ${entry.unit}</td>
+                `;
+                withdrawalHistoryTableBody.appendChild(row);
+            });
+        }
+
+        /**
+         * Renderizador principal: Decide qual visualização mostrar.
+         */
+        function render() {
+            updateTabUI(); // Atualiza a aparência das abas
+
+            // Verifica qual aba está ativa
+            if (state.currentWarehouse === 'relatorio') {
+                // Mostra a área do relatório e esconde a principal
+                mainContentArea.classList.add('hidden');
+                reportArea.classList.remove('hidden');
+                renderReport(); // Chama o renderizador do relatório
+            } else {
+                // Mostra a área principal e esconde a do relatório
+                mainContentArea.classList.remove('hidden');
+                reportArea.classList.add('hidden');
+                renderItemList(); // Renderiza a lista de itens
+                renderItemDetails(); // Renderiza os detalhes
+            }
+        }
+        
+        /**
+         * Atualiza a aparência das abas de navegação.
+         */
+        function updateTabUI() {
+            document.querySelectorAll('.warehouse-tab').forEach(tab => {
+                if (tab.dataset.warehouse === state.currentWarehouse) {
+                    tab.classList.add('bg-white', 'text-blue-600', 'shadow-md');
+                    tab.classList.remove('text-gray-600', 'hover:bg-gray-200');
+                } else {
+                    tab.classList.remove('bg-white', 'text-blue-600', 'shadow-md');
+                    tab.classList.add('text-gray-600', 'hover:bg-gray-200');
+                }
+            });
+        }
+        
+        /**
+         * Gera o HTML para um "badge" de status (OK, Baixo, Crítico).
+         */
+        function renderStatusBadge(status, isLarge = false) {
+            let colorClasses = '';
+            let text = status;
+            let icon = 'ellipse';
+
+            switch (status) {
+                case 'OK':
+                    colorClasses = 'bg-green-100 text-green-800';
+                    icon = 'checkmark-circle';
+                    break;
+                case 'Baixo':
+                    colorClasses = 'bg-yellow-100 text-yellow-800';
+                    icon = 'alert-circle';
+                    break;
+                case 'Crítico':
+                    colorClasses = 'bg-red-100 text-red-800';
+                    icon = 'close-circle';
+                    break;
+                default:
+                    colorClasses = 'bg-gray-100 text-gray-800';
+                    text = 'N/D';
+            }
+            
+            const sizeClasses = isLarge ? 'px-3 py-1 text-sm' : 'px-2.5 py-0.5 text-xs';
+
+            return `<span class="${sizeClasses} font-medium rounded-full ${colorClasses} inline-flex items-center">
+                        <ion-icon name="${icon}-outline" class="mr-1.5"></ion-icon>
+                        ${text}
+                    </span>`;
+        }
+
+        /**
+         * Calcula o status agregado de um item baseado em seus lotes.
+         */
+        function getAggregatedStatus(lotes) {
+            if (lotes.some(l => l.status === 'Crítico')) return 'Crítico';
+            if (lotes.some(l => l.status === 'Baixo')) return 'Baixo';
+            return 'OK';
+        }
+
+        /**
+         * Verifica a validade de um lote e retorna classes e texto.
+         */
+        function getValidityStatus(validadeStr) {
+            const validade = parseDate(validadeStr);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Zera o tempo para comparar só a data
+
+            const warningDate = new Date(today);
+            warningDate.setDate(today.getDate() + 30); // Define a data de aviso (30 dias)
+
+            if (validade < today) {
+                return { statusClass: 'text-red-600', statusText: 'Vencido', statusIcon: 'calendar-outline' };
+            }
+            if (validade <= warningDate) {
+                return { statusClass: 'text-yellow-600', statusText: 'Vence em 30d', statusIcon: 'alert-circle-outline' };
+            }
+            return { statusClass: 'text-green-600', statusText: 'OK', statusIcon: 'checkmark-circle-outline' };
+        }
+
+        /**
+         * Mostra uma notificação (toast) na tela.
+         */
+        function showNotification(message, type = 'info') {
+            // NOVO: Mostra o ponto de notificação no sino
+            notificationDot.classList.remove('hidden');
+
+            const icons = {
+                info: 'information-circle-outline',
+                success: 'checkmark-circle-outline',
+                warning: 'alert-circle-outline',
+                error: 'close-circle-outline'
+            };
+            const colors = {
+                info: 'bg-blue-500',
+                success: 'bg-green-500',
+                warning: 'bg-yellow-500',
+                error: 'bg-red-500'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `flex items-center w-full max-w-xs p-4 text-white ${colors[type]} rounded-lg shadow-lg transform translate-x-full opacity-0 transition-all duration-300 ease-out`;
+            toast.innerHTML = `
+                <ion-icon name="${icons[type]}" class="text-2xl mr-3"></ion-icon>
+                <div class="text-sm font-medium">${message}</div>
+            `;
+            notificationContainer.appendChild(toast);
+
+            // Animação de entrada
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            }, 10);
+
+            // Animação de saída
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'scale-90');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+
+        // --- FUNÇÕES DE EVENTOS (HANDLERS) ---
+
+        /**
+         * Manipula a troca de abas (Almoxarifados ou Relatório).
+         */
+        function handleTabClick(e) {
+            const tab = e.target.closest('.warehouse-tab');
+            if (tab) {
+                const warehouseName = tab.dataset.warehouse;
+                state.currentWarehouse = warehouseName;
+                state.selectedFlavorCode = null; // Reseta a seleção ao trocar de aba
+                state.searchTerm = ''; // Reseta a busca
+                searchBar.value = '';
+                render(); // Renderiza a nova visualização
+            }
+        }
+
+        /**
+         * Manipula a seleção de um item na lista da esquerda.
+         */
+        function handleItemSelect(flavorCode) {
+            state.selectedFlavorCode = flavorCode;
+            render(); // Re-renderiza tudo para mostrar a seleção
+        }
+
+        /**
+         * Manipula a digitação na barra de busca.
+         */
+        function handleSearch(e) {
+            state.searchTerm = e.target.value;
+            // O renderItemDetails é chamado dentro do renderItemList se um item estiver selecionado
+            // Mas se a busca fizer o item selecionado sumir, precisamos limpar os detalhes.
+            const itemIsVisible = state.warehouses[state.currentWarehouse]
+                .filter(item => {
+                    const searchTermLower = state.searchTerm.toLowerCase();
+                    if (searchTermLower === '') return true;
+                    if (item.descricao.toLowerCase().includes(searchTermLower)) return true;
+                    if (item.codigo.toLowerCase().includes(searchTermLower)) return true;
+                    return item.lotes.some(lote => lote.id.toLowerCase().includes(searchTermLower));
+                })
+                .some(item => item.codigo === state.selectedFlavorCode);
+
+            if (!itemIsVisible) {
+                state.selectedFlavorCode = null;
+            }
+            
+            renderItemList(); // Re-renderiza a lista de itens (filtrada)
+            renderItemDetails(); // Re-renderiza os detalhes (ou placeholder)
+        }
+        
+        /**
+         * Mostra o modal de "Adicionar Lote".
+         */
+        function handleShowAddLotModal() {
+            addLotForm.reset(); // Limpa o formulário
+            modal.classList.remove('hidden');
+            // Animação de entrada
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        /**
+         * Fecha o modal de "Adicionar Lote".
+         */
+        function handleCloseModal() {
+            // Animação de saída
+            modalContent.classList.add('scale-95', 'opacity-0');
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+        
+        /**
+         * Salva o novo lote (do formulário do modal).
+         */
+        function handleSaveNewLot(e) {
+            e.preventDefault();
+            
+            // Pega os dados do formulário
+            const loteId = document.getElementById('lote-id').value;
+            const validadeRaw = document.getElementById('lote-validade').value; // Formato AAAA-MM-DD
+            const estoqueStr = document.getElementById('lote-estoque').value; // Ex: "250 ml"
+            const status = document.getElementById('lote-status').value;
+
+            // Converte a data para DD/MM/AAAA
+            const [year, month, day] = validadeRaw.split('-');
+            const validade = `${day}/${month}/${year}`;
+
+            // Encontra o item atual
+            const item = state.warehouses[state.currentWarehouse].find(
+                i => i.codigo === state.selectedFlavorCode
+            );
+            if (!item) return;
+
+            // Verifica se o lote já existe
+            if (item.lotes.some(l => l.id === loteId)) {
+                showNotification(`Erro: O lote "${loteId}" já existe para este item.`, 'error');
+                return;
+            }
+
+            const newLot = {
+                id: loteId,
+                validade: validade,
+                estoque: parseStock(estoqueStr), // Usando parseStock
+                status: status,
+                retido: false
+            };
+            
+            // Adiciona o novo lote
+            item.lotes.push(newLot);
+            // Reordena os lotes por validade
+            item.lotes.sort((a, b) => parseDate(a.validade) - parseDate(b.validade));
+            
+            // Fecha o modal e atualiza a UI
+            handleCloseModal();
+            render(); // Renderiza tudo
+            checkAllExpirations(); // Verifica validades novamente
+            checkLowStockNotifications(); // Verifica estoque baixo
+            
+            // Mostra notificação de sucesso
+            showNotification(`Lote ${loteId} adicionado com sucesso!`, 'success');
+        }
+
+        /**
+         * Alterna o estado de retenção de um lote.
+         */
+        function handleToggleRetencao(loteId) {
+            const item = state.warehouses[state.currentWarehouse].find(
+                i => i.codigo === state.selectedFlavorCode
+            );
+            const lote = item?.lotes.find(l => l.id === loteId);
+
+            if (lote) {
+                lote.retido = !lote.retido;
+                renderItemDetails(); // Apenas atualiza os detalhes
+                const action = lote.retido ? 'retido' : 'liberado';
+                showNotification(`Lote ${lote.id} foi ${action}.`, 'info');
+            }
+        }
+
+        // --- FUNÇÕES (Retirada de Estoque) ---
+
+        /**
+         * Mostra o modal de retirada de estoque.
+         */
+        function handleShowWithdrawModal(loteId) {
+            const item = state.warehouses[state.currentWarehouse].find(
+                i => i.codigo === state.selectedFlavorCode
+            );
+            const lote = item.lotes.find(l => l.id === loteId);
+
+            if (!item || !lote) return;
+
+            // Preenche os dados do modal
+            document.getElementById('withdraw-item-codigo').value = item.codigo;
+            document.getElementById('withdraw-lote-id').value = lote.id;
+            document.getElementById('withdraw-item-name').textContent = item.descricao;
+            document.getElementById('withdraw-lote-name').textContent = lote.id;
+            document.getElementById('withdraw-current-stock').textContent = formatStock(lote.estoque);
+            document.getElementById('withdraw-unit-label').textContent = lote.estoque.unit;
+            // Limpa os campos de input
+            document.getElementById('withdraw-amount').value = '';
+            document.getElementById('withdraw-name').value = ''; // Limpa o nome
+
+            // Mostra o modal
+            withdrawModal.classList.remove('hidden');
+            setTimeout(() => {
+                withdrawModalContent.classList.remove('scale-95', 'opacity-0');
+                withdrawModalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        /**
+         * Fecha o modal de retirada de estoque.
+         */
+        function handleCloseWithdrawModal() {
+            withdrawModalContent.classList.add('scale-95', 'opacity-0');
+            withdrawModalContent.classList.remove('scale-100', 'opacity-100');
+            setTimeout(() => {
+                withdrawModal.classList.add('hidden');
+            }, 200);
+        }
+
+        /**
+         * Processa a retirada de estoque do formulário.
+         */
+        function handleWithdrawStock(e) {
+            e.preventDefault();
+
+            const itemCodigo = document.getElementById('withdraw-item-codigo').value;
+            const loteId = document.getElementById('withdraw-lote-id').value;
+            const amountToWithdraw = parseFloat(document.getElementById('withdraw-amount').value);
+            // NOVO: Pega o nome do solicitante
+            const requesterName = document.getElementById('withdraw-name').value.trim();
+
+            if (!requesterName) {
+                showNotification("Por favor, insira o nome do solicitante.", "error");
+                return;
+            }
+            
+            if (isNaN(amountToWithdraw) || amountToWithdraw <= 0) {
+                showNotification("Por favor, insira uma quantidade válida.", "error");
+                return;
+            }
+
+            // Encontra o item e o lote no estado
+            const item = state.warehouses[state.currentWarehouse].find(
+                i => i.codigo === itemCodigo
+            );
+            const lote = item?.lotes.find(l => l.id === loteId);
+
+            if (!lote) {
+                showNotification("Erro: Lote não encontrado.", "error");
+                return;
+            }
+
+            if (amountToWithdraw > lote.estoque.value) {
+                showNotification("Erro: Quantidade a retirar é maior que o estoque atual.", "error");
+                return;
+            }
+
+            // Subtrai o estoque
+            lote.estoque.value -= amountToWithdraw;
+
+            // NOVO: Cria a entrada do histórico
+            const historyEntry = {
+                date: new Date(),
+                requester: requesterName,
+                itemName: item.descricao,
+                loteId: lote.id,
+                amount: amountToWithdraw,
+                unit: lote.estoque.unit
+            };
+            
+            // Adiciona ao início do array (ou ao fim e depois ordena)
+            state.withdrawalHistory.push(historyEntry);
+            // Ordena o histórico (mais recente primeiro)
+            state.withdrawalHistory.sort((a, b) => b.date - a.date);
+
+
+            // Fecha o modal e atualiza a UI
+            handleCloseWithdrawModal();
+            render(); // Renderiza tudo para atualizar a tabela
+            
+            showNotification(`${amountToWithdraw} ${lote.estoque.unit} retirados do lote ${lote.id}.`, 'success');
+            
+            // Verifica se o status do estoque mudou (o usuário pode precisar atualizar manually)
+            if (lote.status === 'OK' && lote.estoque.value < 100) { // Regra de exemplo
+                 showNotification(`Estoque do lote ${lote.id} está baixo. Considere atualizar o status.`, 'warning');
+            }
+        }
+
+
+        // --- LÓGICA DE NEGÓCIO (Validade, etc.) ---
+
+        /**
+         * Verifica TODOS os lotes de TODOS os almoxarifados por validade.
+         */
+        function checkAllExpirations() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const warningDate = new Date(today);
+            warningDate.setDate(today.getDate() + 30);
+            
+            let expiredCount = 0;
+            let warningCount = 0;
+
+            for (const warehouseName in state.warehouses) {
+                const items = state.warehouses[warehouseName];
+                for (const item of items) {
+                    for (const lote of item.lotes) {
+                        const validade = parseDate(lote.validade);
+                        if (validade < today) {
+                            expiredCount++;
+                        } else if (validade <= warningDate) {
+                            warningCount++;
+                        }
+                    }
+                }
+            }
+
+            if (expiredCount > 0) {
+                showNotification(`Atenção: ${expiredCount} lote(s) estão VENCIDOS!`, 'error');
+            }
+            if (warningCount > 0) {
+                showNotification(`Aviso: ${warningCount} lote(s) vencem nos próximos 30 dias.`, 'warning');
+            }
+        }
+
+        /**
+         * Verifica TODOS os itens por estoque baixo/crítico.
+         * Esta é a sua notificação "aviso que está acabando".
+         */
+        function checkLowStockNotifications() {
+            let lowCount = 0;
+            let criticalCount = 0;
+
+            for (const warehouseName in state.warehouses) {
+                const items = state.warehouses[warehouseName];
+                for (const item of items) {
+                    for (const lote of item.lotes) {
+                        if (lote.status === 'Baixo') {
+                            lowCount++;
+                        } else if (lote.status === 'Crítico') {
+                            criticalCount++;
+                        }
+                    }
+                }
+            }
+
+            if (criticalCount > 0) {
+                showNotification(`Atenção: Você tem ${criticalCount} lote(s) com estoque CRÍTICO!`, 'error');
+            }
+            if (lowCount > 0) {
+                showNotification(`Aviso: ${lowCount} lote(s) estão com estoque BAIXO.`, 'warning');
+            }
+        }
+
+
+        // --- INICIALIZAÇÃO ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Adiciona listeners globais
+            warehouseTabs.addEventListener('click', handleTabClick);
+            searchBar.addEventListener('input', handleSearch);
+
+            // NOVO: Listener para o sino (para limpar a notificação)
+            document.getElementById('notification-bell-container').addEventListener('click', () => {
+                notificationDot.classList.add('hidden'); // Esconde o ponto ao clicar
+                // No futuro, isso poderia abrir um painel de notificações
+                // Por enquanto, apenas limpa o indicador.
+            });
+
+            // Listeners do Modal (Adicionar Lote)
+            addLotForm.addEventListener('submit', handleSaveNewLot);
+            closeModalBtn.addEventListener('click', handleCloseModal);
+            // Fecha o modal se clicar fora do conteúdo
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    handleCloseModal();
+                }
+            });
+
+            // Listeners do Modal (Retirar Estoque)
+            withdrawStockForm.addEventListener('submit', handleWithdrawStock);
+            closeWithdrawModalBtn.addEventListener('click', handleCloseWithdrawModal);
+            withdrawModal.addEventListener('click', (e) => {
+                if (e.target === withdrawModal) {
+                    handleCloseWithdrawModal();
+                }
+            });
+            
+            // Renderização inicial
+            render();
+            
+            // Verifica validades ao carregar a página
+            checkAllExpirations();
+            
+            // Verifica estoques baixos ao carregar a página
+            checkLowStockNotifications();
+            
+        });
+    </script>
+
+</body>
+</html>
