@@ -37,7 +37,7 @@
             border-right: 4px solid #0284c7; /* Borda azul escura */
         }
         
-        /* NOVO: Estilo para botão de tipo de retirada ativo */
+        /* Estilo para botão de tipo de retirada ativo */
         .withdraw-type-btn.active {
             background-color: #2563eb; /* Azul */
             color: white;
@@ -48,10 +48,39 @@
             color: #374151; /* Cinza escuro */
         }
 
-        /* NOVO: Estilos de Impressão para o Comprovante */
+        /* Estilos de Impressão para o Comprovante */
         .print-only {
             display: none;
         }
+        /* Linhas de assinatura visíveis no modal */
+        .signature-line {
+            padding-top: 3rem; /* 48px */
+            border-top: 1px dashed #9ca3af; /* border-gray-400 */
+            text-align: center;
+            margin-top: 4rem; /* 64px */
+            color: #374151; /* text-gray-700 */
+        }
+        .signature-line p {
+            font-weight: 500; /* font-medium */
+        }
+        
+        /* NOVO: Animação de pulso para o botão de ajuda */
+        .pulse-anim {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+            }
+            70% {
+                opacity: .9;
+                transform: scale(1.05);
+                box-shadow: 0 0 0 12px rgba(37, 99, 235, 0);
+            }
+        }
+
+
         @media print {
             body * {
                 visibility: hidden;
@@ -71,6 +100,10 @@
                 display: none !important;
             }
             .print-only {
+                display: block !important;
+            }
+            /* Garante que as assinaturas sejam visíveis na impressão */
+            .signature-line {
                 display: block !important;
             }
         }
@@ -136,10 +169,15 @@
                             <input type="text" id="search-bar" class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Buscar por aroma, código ou lote...">
                             <ion-icon name="search-outline" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></ion-icon>
                         </div>
-                        <!-- NOVO: Botão de Importação -->
+                        <!-- Botão de Importação -->
                         <button id="show-import-modal-btn" class="mt-3 w-full bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-200 transition-colors duration-200 flex items-center justify-center text-sm">
                             <ion-icon name="document-text-outline" class="mr-2"></ion-icon>
                             Importar Dados (CSV)
+                        </button>
+                        <!-- NOVO: Botão de Cadastrar Produto -->
+                        <button id="show-add-product-modal-btn" class="mt-2 w-full bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors duration-200 flex items-center justify-center text-sm">
+                            <ion-icon name="add-circle-outline" class="mr-2"></ion-icon>
+                            Cadastrar Novo Produto
                         </button>
                     </div>
                     <!-- Lista de Itens com Rolagem -->
@@ -149,26 +187,21 @@
                 </div>
 
                 <!-- Coluna da Direita: Detalhes do Item -->
-                <div id="item-details" class="lg:col-span-2 bg-white rounded-lg shadow-lg p-6" style="height: calc(100vh - 200px); overflow-y: auto;">
+                <!-- MUDANÇA: Adicionado 'relative' para posicionar o botão de ajuda -->
+                <div id="item-details" class="relative lg:col-span-2 bg-white rounded-lg shadow-lg p-6" style="height: calc(100vh - 200px); overflow-y: auto;">
                     <!-- Conteúdo dos detalhes será inserido aqui -->
                     <div id="details-placeholder" class="flex flex-col items-center justify-center h-full text-gray-500 text-center">
                         <ion-icon name="cube-outline" class="text-8xl text-gray-400"></ion-icon>
                         <p class="mt-4 text-2xl font-semibold text-gray-700">Bem-vindo ao Controle de Almoxarifado</p>
                         <p class="mt-2 text-lg text-gray-600">Selecione um item da lista à esquerda para começar.</p>
             
-                        <!-- Orientações Rápidas -->
-                        <div class="mt-10 pt-6 border-t w-full max-w-lg text-left">
-                            <h3 class="text-lg font-semibold text-gray-700 mb-3">Orientações Rápidas:</h3>
-                            <ul class="list-disc list-inside space-y-2 text-gray-600">
-                                <li><strong>Ver Detalhes:</strong> Clique em um item na lista (ex: "Abacaxi") para ver seus lotes.</li>
-                                <li><strong>Adicionar Lote:</strong> Após selecionar um item, clique no botão "Adicionar Lote".</li>
-                                <li><strong>Retirar Estoque:</strong> Clique no botão "Retirar" e escolha "Uso Interno" ou "Outro Setor".</li>
-                                <li><strong>Descartar Estoque:</strong> Clique no botão "Descartar" (lixeira) em um lote.</li>
-                                <li><strong>Ver Relatório:</strong> Use as abas de relatório no menu acima para ver o histórico.</li>
-                                <li><strong>Importar Dados:</strong> Use o botão "Importar Dados (CSV)" para carregar sua própria planilha.</li>
-                            </ul>
-                        </div>
+                        <!-- Orientações Rápidas REMOVIDAS DAQUI -->
                     </div>
+
+                    <!-- NOVO: Botão de Ajuda Flutuante -->
+                    <button id="show-help-btn" class="absolute bottom-6 right-6 bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-transform hover:scale-110 z-20">
+                        <ion-icon name="help-outline" class="text-3xl"></ion-icon>
+                    </button>
                 </div>
             </div>
 
@@ -497,13 +530,14 @@
                     </div>
                 </div>
 
-                <!-- Campos de Assinatura (Aparece apenas na impressão) -->
-                <div class="print-only mt-16 pt-8 border-t border-dashed border-gray-400 text-gray-800">
-                    <p class="mt-4 text-center">___________________________________</p>
-                    <p class="text-center font-medium">Assinatura Solicitante</p>
-                    
-                    <p class="mt-12 text-center">___________________________________</p>
-                    <p class="text-center font-medium">Assinatura Almoxarifado</p>
+                <!-- CORREÇÃO: Campos de Assinatura agora visíveis no modal E na impressão -->
+                <div class="signature-line">
+                    <p class="mt-4">___________________________________</p>
+                    <p>Assinatura Solicitante</p>
+                </div>
+                <div class="signature-line">
+                    <p class="mt-4">___________________________________</p>
+                    <p>Assinatura Almoxarifado</p>
                 </div>
             </div>
 
@@ -520,6 +554,162 @@
                     <ion-icon name="print-outline" class="mr-2"></ion-icon>
                     Imprimir
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOVO: Modal para Cadastrar Novo Produto -->
+    <div id="add-product-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden no-print">
+        <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md transform transition-all scale-95 opacity-0" id="add-product-modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Cadastrar Novo Produto</h2>
+                <button id="close-add-product-modal-btn" class="text-gray-500 hover:text-gray-800">
+                    <ion-icon name="close-outline" class="text-3xl"></ion-icon>
+                </button>
+            </div>
+            <form id="add-product-form">
+                <div class="space-y-4">
+                    <div>
+                        <label for="product-warehouse-select" class="block text-sm font-medium text-gray-700 mb-1">Almoxarifado *</label>
+                        <select id="product-warehouse-select" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="doces">Aromas Doces</option>
+                            <option value="salgados">Aromas Salgados</option>
+                            <option value="materiaPrima">Matéria Prima</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="product-descricao" class="block text-sm font-medium text-gray-700 mb-1">Descrição (Nome do Produto) *</label>
+                        <input type="text" id="product-descricao" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: Aroma de Baunilha">
+                    </div>
+                    <div>
+                        <label for="product-codigo" class="block text-sm font-medium text-gray-700 mb-1">Código (Ref.) *</label>
+                        <input type="text" id="product-codigo" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: 1001">
+                    </div>
+                    <div>
+                        <label for="product-localizacao" class="block text-sm font-medium text-gray-700 mb-1">Localização *</label>
+                        <input type="text" id="product-localizacao" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: 1.5">
+                    </div>
+                    <div>
+                        <label for="product-bloco" class="block text-sm font-medium text-gray-700 mb-1">Bloco *</label>
+                        <input type="text" id="product-bloco" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: I - L">
+                    </div>
+                    <div>
+                        <label for="product-formato" class="block text-sm font-medium text-gray-700 mb-1">Formato *</label>
+                        <select id="product-formato" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="Líquido">Líquido</option>
+                            <option value="Pó">Pó</option>
+                            <option value="Pasta">Pasta</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mt-8 flex justify-end">
+                    <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors duration-200 flex items-center">
+                        <ion-icon name="save-outline" class="mr-2"></ion-icon>
+                        Salvar Produto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- NOVO: Modal para Confirmar Exclusão de Produto -->
+    <div id="delete-product-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden no-print">
+        <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md transform transition-all scale-95 opacity-0" id="delete-product-modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-red-700">Confirmar Exclusão</h2>
+                <button id="close-delete-product-modal-btn" class="text-gray-500 hover:text-gray-800">
+                    <ion-icon name="close-outline" class="text-3xl"></ion-icon>
+                </button>
+            </div>
+            <div>
+                <p class="text-gray-700">
+                    Você tem certeza que deseja excluir o produto
+                    <strong id="delete-product-name" class="text-gray-900">...</strong>?
+                </p>
+                <p class="text-gray-600 mt-2">
+                    <strong>Atenção:</strong> Esta ação é irreversível e excluirá
+                    <strong>todos os lotes</strong> associados a este item.
+                </p>
+            </div>
+            <div class="mt-8 flex justify-end space-x-3">
+                <button id="cancel-delete-btn" class="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors duration-200">
+                    Cancelar
+                </button>
+                <button id="confirm-delete-btn" class="bg-red-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors duration-200 flex items-center">
+                    <ion-icon name="trash-outline" class="mr-2"></ion-icon>
+                    Sim, Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MUDANÇA: Modal para Orientações de Ajuda -->
+    <div id="help-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden no-print">
+        <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-lg transform transition-all scale-95 opacity-0" id="help-modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Orientações Rápidas</h2>
+                <button id="close-help-modal-btn" class="text-gray-500 hover:text-gray-800">
+                    <ion-icon name="close-outline" class="text-3xl"></ion-icon>
+                </button>
+            </div>
+            <!-- MUDANÇA: Lista reformatada com mais espaçamento -->
+            <div class="text-gray-700 space-y-5">
+                <div class="flex">
+                    <ion-icon name="eye-outline" class="text-2xl text-blue-500 mr-4 mt-1"></ion-icon>
+                    <div>
+                        <strong class="text-gray-800">Ver Detalhes</strong>
+                        <p class="text-sm">Clique em um item na lista (ex: "Abacaxi") para ver seus lotes.</p>
+                    </div>
+                </div>
+                <div class="flex">
+                    <ion-icon name="add-circle-outline" class="text-2xl text-green-500 mr-4 mt-1"></ion-icon>
+                    <div>
+                        <strong class="text-gray-800">Cadastrar Produto</strong>
+                        <p class="text-sm">Use o botão verde "Cadastrar Novo Produto" na barra lateral esquerda.</p>
+                    </div>
+                </div>
+                <div class="flex">
+                    <ion-icon name="duplicate-outline" class="text-2xl text-blue-500 mr-4 mt-1"></ion-icon>
+                    <div>
+                        <strong class="text-gray-800">Adicionar Lote</strong>
+                        <p class="text-sm">Após selecionar um item, clique no botão azul "Adicionar Lote".</p>
+                    </div>
+                </div>
+                <div class="flex">
+                    <ion-icon name="trash-bin-outline" class="text-2xl text-red-500 mr-4 mt-1"></ion-icon>
+                    <div>
+                        <strong class="text-gray-800">Excluir Produto</strong>
+                        <p class="text-sm">Clique no ícone de lixeira ao lado de "Adicionar Lote" para remover o item e todos os seus lotes.</p>
+                    </div>
+                </div>
+                 <div class="flex">
+                    <ion-icon name="remove-circle-outline" class="text-2xl text-yellow-600 mr-4 mt-1"></ion-icon>
+                    <div>
+                        <strong class="text-gray-800">Retirar Estoque</strong>
+                        <p class="text-sm">Clique no botão "Retirar" em um lote e escolha "Uso Interno" (rápido) ou "Outro Setor" (comprovante).</p>
+                    </div>
+                </div>
+                <div class="flex">
+                    <ion-icon name="trash-outline" class="text-2xl text-red-500 mr-4 mt-1"></ion-icon>
+                    <div>
+                        <strong class="text-gray-800">Descartar Estoque</strong>
+                        <p class="text-sm">Clique no botão "Descartar" (lixeira) em um lote para registrar uma perda.</p>
+                    </div>
+                </div>
+                <div class="flex">
+                    <ion-icon name="document-text-outline" class="text-2xl text-gray-500 mr-4 mt-1"></ion-icon>
+                    <div>
+                        <strong class="text-gray-800">Importar Dados</strong>
+                        <p class="text-sm">Use o botão "Importar Dados (CSV)" para carregar sua própria planilha. Isso substitui os dados do almoxarifado selecionado.</p>
+                    </div>
+                </div>
+                <div class="flex">
+                    <ion-icon name="notifications-outline" class="text-2xl text-blue-500 mr-4 mt-1"></ion-icon>
+                    <div>
+                        <strong class="text-gray-800">Notificações</strong>
+                        <p class="text-sm">Clique no sino para ver alertas de estoque baixo ou lotes vencidos. O ponto vermelho indica novidades.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -641,6 +831,27 @@
         const closeReceiptBtn = document.getElementById('close-receipt-btn');
         const printReceiptBtn = document.getElementById('print-receipt-btn');
         const emailReceiptBtn = document.getElementById('email-receipt-btn');
+
+        // NOVO: Seletores do Modal de Cadastro de Produto
+        const addProductModal = document.getElementById('add-product-modal');
+        const addProductModalContent = document.getElementById('add-product-modal-content');
+        const closeAddProductModalBtn = document.getElementById('close-add-product-modal-btn');
+        const addProductForm = document.getElementById('add-product-form');
+        const showAddProductModalBtn = document.getElementById('show-add-product-modal-btn');
+
+        // NOVO: Seletores do Modal de Exclusão de Produto
+        const deleteProductModal = document.getElementById('delete-product-modal');
+        const deleteProductModalContent = document.getElementById('delete-product-modal-content');
+        const closeDeleteProductModalBtn = document.getElementById('close-delete-product-modal-btn');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        const deleteProductName = document.getElementById('delete-product-name');
+        
+        // NOVO: Seletores do Modal de Ajuda
+        const showHelpBtn = document.getElementById('show-help-btn');
+        const helpModal = document.getElementById('help-modal');
+        const helpModalContent = document.getElementById('help-modal-content');
+        const closeHelpModalBtn = document.getElementById('close-help-modal-btn');
         
 
         // --- FUNÇÕES DE PROCESSAMENTO DE DADOS ---
@@ -785,9 +996,13 @@
                         if (lote.status === 'Baixo') hasLowStock = true;
                         if (lote.status === 'Crítico') hasCriticalStock = true;
                     });
+                } else {
+                    // Se não tem lote, o status depende do formato (ml, g, kg, L)
+                    unit = 'un'; // Unidade padrão se não houver lotes
                 }
 
                 let statusColor = 'text-green-600';
+                if (item.lotes.length === 0) statusColor = 'text-gray-400'; // Sem estoque
                 if (hasLowStock) statusColor = 'text-yellow-600';
                 if (hasCriticalStock) statusColor = 'text-red-600';
 
@@ -814,6 +1029,8 @@
                 detailsPlaceholderEl.classList.add('flex');
                 itemDetailsEl.innerHTML = '';
                 itemDetailsEl.appendChild(detailsPlaceholderEl);
+                // Move o botão de ajuda para dentro do placeholder
+                itemDetailsEl.appendChild(showHelpBtn); 
                 return;
             }
 
@@ -897,10 +1114,17 @@
                             <span><strong>Formato:</strong> ${item.formato}</span>
                         </div>
                     </div>
-                    <button id="show-add-lot-btn" class="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200 flex items-center">
-                        <ion-icon name="add-circle-outline" class="mr-2"></ion-icon>
-                        Adicionar Lote
-                    </button>
+                    <!-- NOVO: Wrapper para botões -->
+                    <div class="flex space-x-3">
+                        <button id="show-add-lot-btn" class="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200 flex items-center">
+                            <ion-icon name="add-circle-outline" class="mr-2"></ion-icon>
+                            Adicionar Lote
+                        </button>
+                        <!-- NOVO BOTÃO EXCLUIR -->
+                        <button id="show-delete-product-btn" class="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors duration-200 flex items-center" title="Excluir este produto">
+                            <ion-icon name="trash-outline" class="text-xl"></ion-icon>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="mt-6">
@@ -923,6 +1147,8 @@
                     </div>
                 </div>
             `;
+            // Adiciona o botão de ajuda de volta
+            itemDetailsEl.appendChild(showHelpBtn);
 
             // Adiciona eventos aos novos botões criados
             document.getElementById('show-add-lot-btn').addEventListener('click', handleShowAddLotModal);
@@ -936,6 +1162,8 @@
             document.querySelectorAll('.discard-btn').forEach(btn => {
                 btn.addEventListener('click', () => handleShowDiscardModal(btn.dataset.loteId));
             });
+            // NOVO LISTENER
+            document.getElementById('show-delete-product-btn').addEventListener('click', handleShowDeleteProductModal);
         }
 
         /**
@@ -1236,6 +1464,132 @@
             }
         }
 
+        // --- NOVO: FUNÇÕES (Cadastro de Produto) ---
+
+        /**
+         * Mostra o modal de "Cadastrar Novo Produto".
+         */
+        function handleShowAddProductModal() {
+            addProductForm.reset();
+            // Sugere o almoxarifado atual
+            try {
+                document.getElementById('product-warehouse-select').value = state.currentWarehouse;
+            } catch(e) {}
+            handleShowModal(addProductModal, addProductModalContent);
+        }
+
+        /**
+         * Verifica se um código de produto já existe em qualquer almoxarifado.
+         */
+        function isProductCodeDuplicate(codigo) {
+            for (const warehouseName in state.warehouses) {
+                if (state.warehouses[warehouseName].some(item => item.codigo === codigo)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Salva o novo produto (do formulário do modal).
+         */
+        function handleSaveNewProduct(e) {
+            e.preventDefault();
+
+            // Pega os dados do formulário
+            const warehouseName = document.getElementById('product-warehouse-select').value;
+            const descricao = document.getElementById('product-descricao').value.trim();
+            const codigo = document.getElementById('product-codigo').value.trim();
+            const localizacao = document.getElementById('product-localizacao').value.trim();
+            const bloco = document.getElementById('product-bloco').value.trim();
+            const formato = document.getElementById('product-formato').value;
+
+            // Validação
+            if (!descricao || !codigo || !localizacao || !bloco) {
+                showToast("Erro: Todos os campos são obrigatórios.", "error");
+                return;
+            }
+
+            // Validação de duplicata
+            if (isProductCodeDuplicate(codigo)) {
+                showToast("Erro: Já existe um produto com este Código (Ref.).", "error");
+                return;
+            }
+
+            // Cria novo objeto de produto
+            const newProduct = {
+                codigo: codigo,
+                descricao: descricao,
+                localizacao: localizacao,
+                bloco: bloco,
+                formato: formato,
+                lotes: [] // Começa sem lotes
+            };
+
+            // Adiciona ao almoxarifado e reordena
+            state.warehouses[warehouseName].push(newProduct);
+            state.warehouses[warehouseName].sort((a, b) => a.descricao.localeCompare(b.descricao));
+
+            // Salva no storage
+            saveDataToStorage();
+
+            // Fecha o modal e atualiza a UI
+            handleCloseModal(addProductModal, addProductModalContent);
+            showToast(`Produto "${descricao}" cadastrado com sucesso!`, 'success');
+
+            // Muda para a aba e seleciona o novo item
+            handleTabClick(warehouseName);
+            // Usamos setTimeout para garantir que a UI da aba foi atualizada antes de clicar
+            setTimeout(() => {
+                 handleItemClick(codigo);
+            }, 50);
+        }
+
+
+        // --- NOVO: FUNÇÕES (Exclusão de Produto) ---
+
+        /**
+         * Mostra o modal de confirmação de exclusão.
+         */
+        function handleShowDeleteProductModal() {
+            const item = state.warehouses[state.currentWarehouse].find(
+                i => i.codigo === state.selectedFlavorCode
+            );
+            if (!item) return;
+
+            deleteProductName.textContent = item.descricao; // Preenche o nome no modal
+            handleShowModal(deleteProductModal, deleteProductModalContent);
+        }
+
+        /**
+         * Processa a exclusão do produto após confirmação.
+         */
+        function handleConfirmDeleteProduct() {
+            const codigoToDelete = state.selectedFlavorCode;
+            const warehouseName = state.currentWarehouse;
+            
+            if (!codigoToDelete) return;
+            
+            const item = state.warehouses[warehouseName].find(i => i.codigo === codigoToDelete);
+
+            // Filtra o item fora do array
+            state.warehouses[warehouseName] = state.warehouses[warehouseName].filter(
+                item => item.codigo !== codigoToDelete
+            );
+
+            // Reseta a seleção
+            state.selectedFlavorCode = null;
+
+            // Salva a mudança
+            saveDataToStorage();
+
+            // Fecha o modal e atualiza a UI
+            handleCloseModal(deleteProductModal, deleteProductModalContent);
+            render(); // Vai voltar ao placeholder
+            showToast(`Produto "${item.descricao}" e todos os seus lotes foram excluídos.`, 'success');
+        }
+
+
         // --- FUNÇÕES (Retirada de Estoque) ---
 
         /**
@@ -1433,6 +1787,10 @@ Produto: ${entry.itemName} (Cód: ${entry.itemCodigo})
 Lote: ${entry.loteId}
 Quantidade Retirada: ${entry.amount} ${entry.unit}
 --------------------------------------------------
+
+Assinatura Solicitante: _________________________
+
+Assinatura Almoxarifado: _________________________
             `.trim().replace(/\n/g, '%0D%0A'); // Converte quebras de linha para URL
             
             window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -1611,6 +1969,22 @@ Quantidade Retirada: ${entry.amount} ${entry.unit}
             renderNotificationPanel(); // Limpa a UI
             saveDataToStorage(); // Salva o estado limpo
         }
+        
+        // NOVO: FUNÇÕES (Modal de Ajuda)
+        /**
+         * Mostra o modal de ajuda e para a animação.
+         */
+        function handleShowHelpModal() {
+            handleShowModal(helpModal, helpModalContent);
+            // Para a animação
+            showHelpBtn.classList.remove('pulse-anim');
+            // Salva que a ajuda foi vista
+            try {
+                localStorage.setItem('helpViewed', 'true');
+            } catch (e) {
+                console.warn("Não foi possível salvar 'helpViewed' no localStorage.", e);
+            }
+        }
 
         // --- LÓGICA DE NEGÓCIO (Validade, Estoque) ---
 
@@ -1771,6 +2145,7 @@ Quantidade Retirada: ${entry.amount} ${entry.unit}
                     if (!state.warehouses.doces || state.warehouses.doces.length === 0) {
                         state.warehouses.doces = parseAndGroupData(defaultCsvData);
                     }
+                    // Garante que os outros sejam arrays vazios se não existirem
                     if (!state.warehouses.salgados) state.warehouses.salgados = [];
                     if (!state.warehouses.materiaPrima) state.warehouses.materiaPrima = [];
 
@@ -1870,9 +2245,42 @@ Quantidade Retirada: ${entry.amount} ${entry.unit}
             importDataModal.addEventListener('click', (e) => {
                 if (e.target === importDataModal) handleCloseModal(importDataModal, importModalContent);
             });
+
+            // NOVO: Eventos do Modal "Cadastrar Produto"
+            showAddProductModalBtn.addEventListener('click', handleShowAddProductModal);
+            addProductForm.addEventListener('submit', handleSaveNewProduct);
+            closeAddProductModalBtn.addEventListener('click', () => handleCloseModal(addProductModal, addProductModalContent));
+            addProductModal.addEventListener('click', (e) => {
+                if (e.target === addProductModal) handleCloseModal(addProductModal, addProductModalContent);
+            });
+
+            // NOVO: Eventos do Modal "Excluir Produto"
+            confirmDeleteBtn.addEventListener('click', handleConfirmDeleteProduct);
+            cancelDeleteBtn.addEventListener('click', () => handleCloseModal(deleteProductModal, deleteProductModalContent));
+            closeDeleteProductModalBtn.addEventListener('click', () => handleCloseModal(deleteProductModal, deleteProductModalContent));
+            deleteProductModal.addEventListener('click', (e) => {
+                if (e.target === deleteProductModal) handleCloseModal(deleteProductModal, deleteProductModalContent);
+            });
             
+            // NOVO: Eventos do Modal "Ajuda"
+            showHelpBtn.addEventListener('click', handleShowHelpModal);
+            closeHelpModalBtn.addEventListener('click', () => handleCloseModal(helpModal, helpModalContent));
+            helpModal.addEventListener('click', (e) => {
+                if (e.target === helpModal) handleCloseModal(helpModal, helpModalContent);
+            });
+
             // Renderização inicial
             render();
+            
+            // NOVO: Verifica se o botão de ajuda deve pulsar
+            try {
+                if (localStorage.getItem('helpViewed') !== 'true') {
+                    showHelpBtn.classList.add('pulse-anim');
+                }
+            } catch (e) {
+                console.warn("Não foi possível ler 'helpViewed' do localStorage.", e);
+                showHelpBtn.classList.add('pulse-anim'); // Pulsa se não conseguir ler
+            }
             
             // Verifica validades e estoques ao carregar a página
             setTimeout(() => {
@@ -1884,8 +2292,6 @@ Quantidade Retirada: ${entry.amount} ${entry.unit}
 
     </script>
 
-</body>
-</html>
 </body>
 </html>
 
