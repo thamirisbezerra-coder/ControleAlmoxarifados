@@ -459,7 +459,8 @@
             <p class="text-gray-600 mb-4">
                 Cole os dados da sua planilha (Excel, Google Sheets) aqui. Os dados serão salvos localmente no seu navegador.
                 <br>
-                <strong>Formato esperado (9 colunas):</strong> Localização, Bloco, Código, Descrição, Formato, Lote, Validade, Estoque, Status.
+                <strong>Formato esperado (8 colunas):</strong><br>
+                <span class="text-xs font-mono bg-gray-100 p-1 rounded">CÓDIGO, DESCRIÇÃO, LOTE, QUANTIDADE, FABRICAÇÃO, VALIDADE, DIAS A VENCER, STATUS</span>
             </p>
             <form id="import-data-form">
                 <div class="space-y-4">
@@ -473,7 +474,7 @@
                     </div>
                     <div>
                         <label for="import-csv-data" class="block text-sm font-medium text-gray-700 mb-1">Cole os dados CSV aqui *</label>
-                        <textarea id="import-csv-data" rows="10" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm" placeholder="1.1,A - B,1,Abacaxi,Líquido,AB2025,10/05/2026,200 ml,OK..."></textarea>
+                        <textarea id="import-csv-data" rows="10" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm" placeholder="1,Abacaxi,AB2025,200 ml,01/05/2024,10/05/2026,365,OK..."></textarea>
                     </div>
                 </div>
                 <div class="mt-8 flex justify-end">
@@ -722,38 +723,26 @@
 
 
     <script>
-        // --- DADOS INICIAIS (GENÉRICOS) ---
-        // Usados apenas se nada for salvo no localStorage
-        const defaultCsvData = `1.1,A - B,1,Abacaxi,Líquido,AB2025,10/05/2026,200 ml,OK
-1.1,A - B,2,Amora,Líquido,AM0925,22/11/2026,150 ml,OK
-1.1,A - B,3,Baunilha (Essência Clássica),Líquido,BA1125,15/03/2026,350 ml,Baixo
-1.2,C,4,Café,Líquido,CF0725,20/09/2026,180 ml,OK
-1.2,C,5,Caramelo,Líquido,CA0524,20/07/2025,120 ml,Crítico
-1.3,D - E,6,Damasco,Líquido,DA0326,10/06/2027,100 ml,OK
-1.4,F - H,7,Framboesa,Líquido,FR0326,05/06/2027,80 ml,Baixo
-1.4,F - H,8,Groselha,Líquido,GO0525,15/07/2026,120 ml,OK
-1.5,I - L,9,Laranja,Líquido,LA0725,20/09/2026,200 ml,OK
-1.5,I - L,10,Limão,Líquido,LI0225,01/04/2026,250 ml,OK
-1.5,I - L,11,Limão Siciliano,Líquido,LS0225,01/04/2026,250 ml,OK
-1.6,M - N,12,Maracujá,Líquido,MR1025,22/10/2026,300 ml,OK
-1.6,M - N,13,Mel,Líquido,ME0825,19/11/2026,150 ml,OK
-1.6,M - N,14,Morango,Líquido,MO0825,22/10/2026,300 ml,Baixo
-1.7,O - P,15,Pêssego,Líquido,PE0425,09/05/2026,180 ml,OK
-1.7,O - P,16,Pêssego em Calda,Líquido,PC0425,09/05/2026,180 ml,OK
-1.8,Q - R,17,Rum,Líquido,RU0624,12/09/2025,90 ml,Baixo
-1.9,S - Z,18,Tutti-Frutti,Líquido,TF0126,28/02/2027,50 ml,Crítico
-2.1,A - B,19,Amêndoa,Pasta,AM1125,15/01/2027,500 g,OK
-2.1,A - B,20,Avelã,Pasta,AV1025,20/12/2026,400 g,OK
-2.2,C,21,Chocolate,Pasta,CH0326,10/06/2027,1 kg,Baixo
-2.3,D - E,22,Doce de Leite,Pasta,DL0126,25/03/2027,800 g,OK
-2.4,F - H,23,Pistache,Pasta,PI0925,18/11/2026,300 g,Crítico
-2.5,I - L,24,Leite Condensado,Pasta,LC0226,05/04/2027,1.5 kg,OK
-2.6,M - N,25,Ninho,Pasta,NI0825,20/10/2026,600 g,OK
-2.7,S - Z,26,Chocolate Branco,Pasta,CB0725,15/09/2026,1 kg,Baixo
-3.1,A - B,27,Baunilha (Pó),Pó,BA0525P,10/08/2026,500 g,OK
-3.2,C,28,Canela,Pó,CA0126P,30/03/2027,200 g,OK
-3.2,C,29,Coco Ralado,Pó,CO0925P,25/11/2026,700 g,Baixo
-3.3,F - H,30,Leite em Pó,Pó,LE0425P,15/07/2026,2 kg,Crítico`;
+        // --- DADOS INICIAIS (ATUALIZADOS PARA O NOVO FORMATO) ---
+        // CÓDIGO, DESCRIÇÃO, LOTE, QUANTIDADE, FABRICAÇÃO, VALIDADE, DIAS A VENCER, STATUS
+        const defaultCsvData = `1,Abacaxi,AB2025,200 ml,01/01/2024,10/05/2026,365,OK
+2,Amora,AM0925,150 ml,01/01/2024,22/11/2026,365,OK
+3,Baunilha (Essência Clássica),BA1125,350 ml,01/01/2024,15/03/2026,60,Baixo
+4,Café,CF0725,180 ml,01/01/2024,20/09/2026,365,OK
+5,Caramelo,CA0524,120 ml,01/01/2024,20/07/2025,30,Crítico
+6,Damasco,DA0326,100 ml,01/01/2024,10/06/2027,365,OK
+7,Framboesa,FR0326,80 ml,01/01/2024,05/06/2027,365,Baixo
+8,Groselha,GO0525,120 ml,01/01/2024,15/07/2026,365,OK
+9,Laranja,LA0725,200 ml,01/01/2024,20/09/2026,365,OK
+10,Limão,LI0225,250 ml,01/01/2024,01/04/2026,365,OK
+11,Limão Siciliano,LS0225,250 ml,01/01/2024,01/04/2026,365,OK
+12,Maracujá,MR1025,300 ml,01/01/2024,22/10/2026,365,OK
+13,Mel,ME0825,150 ml,01/01/2024,19/11/2026,365,OK
+14,Morango,MO0825,300 ml,01/01/2024,22/10/2026,365,Baixo
+15,Pêssego,PE0425,180 ml,01/01/2024,09/05/2026,365,OK
+16,Pêssego em Calda,PC0425,180 ml,01/01/2024,09/05/2026,365,OK
+17,Rum,RU0624,90 ml,01/01/2024,12/09/2025,365,Baixo
+18,Tutti-Frutti,TF0126,50 ml,01/01/2024,28/02/2027,365,Crítico`;
 
         // --- ESTADO GLOBAL DA APLICAÇÃO ---
         const state = {
@@ -901,7 +890,15 @@
 
         /**
          * Função para processar o CSV e agrupar lotes por aroma.
-         * Retorna um ARRAY de itens.
+         * NOVA ESTRUTURA:
+         * 0: CÓDIGO
+         * 1: DESCRIÇÃO
+         * 2: LOTE
+         * 3: QUANTIDADE
+         * 4: FABRICAÇÃO (Ignorado)
+         * 5: VALIDADE
+         * 6: DIAS A VENCER (Ignorado)
+         * 7: STATUS
          */
         function parseAndGroupData(csvString) {
             const groupedFlavors = new Map();
@@ -909,44 +906,51 @@
 
             for (const line of lines) {
                 const parts = line.split(',');
-                if (parts.length < 9) continue; // Ignora linhas malformadas
+                // Agora esperamos pelo menos 8 colunas, mas validamos se tem o essencial
+                if (parts.length < 4) continue; 
 
-                const flavorKey = parts[3].trim(); // "Descrição do Aroma"
-                const flavorCode = parts[2].trim(); // "ID do Aroma (Ref.)"
-                
+                // Mapeamento Novo
+                const flavorCode = parts[0].trim(); // CÓDIGO
+                const flavorKey = parts[1].trim(); // DESCRIÇÃO
+                const loteIdRaw = parts[2].trim(); // LOTE
+                const quantityRaw = parts[3].trim(); // QUANTIDADE
+                const validadeRaw = parts[5].trim(); // VALIDADE (Índice 5)
+                const statusRaw = parts[7] ? parts[7].trim() : 'OK'; // STATUS (Índice 7)
+
+                // Pular cabeçalho se existir
+                if (flavorCode.toUpperCase() === 'CÓDIGO' || flavorCode.toUpperCase() === 'CODIGO') continue;
+
                 const lotData = {
-                    id: parts[5].trim(), // "Lote"
-                    validade: parts[6].trim(), // "Data de Validade"
-                    estoque: parseStock(parts[7].trim()), // Convertido para objeto
-                    status: parts[8].trim(), // "Status"
-                    retido: false // Campo para retenção
+                    id: loteIdRaw,
+                    validade: validadeRaw,
+                    estoque: parseStock(quantityRaw),
+                    status: statusRaw,
+                    retido: false
                 };
                 
-                // Validação de Lote (para não quebrar o parseDate)
+                // Validação de Lote
                 if (!lotData.validade.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
                     console.warn(`Lote ${lotData.id} ignorado: data de validade inválida (${lotData.validade}). Formato esperado: DD/MM/AAAA`);
                     continue;
                 }
 
                 if (!groupedFlavors.has(flavorKey)) {
-                    // Se é o primeiro lote desse aroma, cria a entrada principal
+                    // Cria a entrada principal
                     groupedFlavors.set(flavorKey, {
-                        codigo: flavorCode, // ID (Ref.)
+                        codigo: flavorCode,
                         descricao: flavorKey,
-                        localizacao: parts[0].trim(),
-                        bloco: parts[1].trim(),
-                        formato: parts[4].trim(),
-                        lotes: [lotData] // Adiciona o primeiro lote
+                        localizacao: "Geral", // Valor Padrão
+                        bloco: "A", // Valor Padrão
+                        formato: "Unid", // Valor Padrão
+                        lotes: [lotData]
                     });
                 } else {
                     // Se o aroma já existe, apenas adiciona o lote
                     const existing = groupedFlavors.get(flavorKey);
-                    // Adiciona o novo lote e reordena por validade
                     existing.lotes.push(lotData);
                     existing.lotes.sort((a, b) => parseDate(a.validade) - parseDate(b.validade));
                 }
             }
-            // Converte o Map para um Array e ordena por descrição
             return Array.from(groupedFlavors.values())
                         .sort((a, b) => a.descricao.localeCompare(b.descricao));
         }
@@ -1009,7 +1013,7 @@
                 itemEl.innerHTML = `
                     <div>
                         <h3 class="font-semibold text-gray-800">${item.descricao}</h3>
-                        <span class="text-sm text-gray-500">Cód: ${item.codigo} | Local: ${item.localizacao} (${item.bloco})</span>
+                        <span class="text-sm text-gray-500">Cód: ${item.codigo}</span>
                     </div>
                     <div class="text-right">
                         <span class="font-bold text-lg ${statusColor}">${formatStock({value: totalStock, unit: unit})}</span>
@@ -2167,12 +2171,12 @@ Assinatura Almoxarifado: _________________________
             state.warehouses.doces = parseAndGroupData(defaultCsvData);
             // Você pode adicionar dados padrões para salgados e matéria prima aqui
             state.warehouses.salgados = [
-                 { codigo: 'S1', descricao: 'Aroma de Bacon (Exemplo)', formato: 'Pó', localizacao: 'S.1', bloco: 'A-C', lotes: [
+                 { codigo: 'S1', descricao: 'Aroma de Bacon (Exemplo)', formato: 'Pó', localizacao: 'Geral', bloco: 'A', lotes: [
                      { id: 'BCN100', validade: '15/10/2026', estoque: { value: 500, unit: 'g' }, status: 'OK', retido: false }
                  ]}
             ];
             state.warehouses.materiaPrima = [
-                 { codigo: 'MP1', descricao: 'Ácido Cítrico (Exemplo)', formato: 'Pó', localizacao: 'MP.1', bloco: 'A-Z', lotes: [
+                 { codigo: 'MP1', descricao: 'Ácido Cítrico (Exemplo)', formato: 'Pó', localizacao: 'Geral', bloco: 'A', lotes: [
                      { id: 'AC4500', validade: '01/01/2028', estoque: { value: 25, unit: 'kg' }, status: 'OK', retido: false }
                  ]}
             ];
@@ -2294,4 +2298,5 @@ Assinatura Almoxarifado: _________________________
 
 </body>
 </html>
+
 
