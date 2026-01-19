@@ -51,6 +51,17 @@
             transform: translateY(-1px);
         }
 
+        /* Filtros Ativos */
+        .filter-btn {
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .filter-btn.active-all { background-color: #334155; color: white; }
+        .filter-btn.active-expired { background-color: #ef4444; color: white; }
+        .filter-btn.active-warning { background-color: #f59e0b; color: white; }
+        
+        .filter-btn:not(.active):hover { background-color: #f1f5f9; border-color: #e2e8f0; }
+
         /* Botão de Tipo de Retirada */
         .withdraw-type-btn.active {
             background-color: #2563eb; 
@@ -145,12 +156,25 @@
             <div class="col-span-12 lg:col-span-4 flex flex-col h-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <!-- Busca e Ações -->
                 <div class="p-5 border-b border-slate-100 bg-white z-10">
-                    <div class="relative group">
+                    <div class="relative group mb-3">
                         <input type="text" id="search-bar" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium" placeholder="Buscar produto, código ou lote...">
                         <ion-icon name="search-outline" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors"></ion-icon>
                     </div>
+
+                    <!-- NOVO: Filtros de Validade -->
+                    <div class="flex space-x-2 mb-4 overflow-x-auto pb-1" id="filter-container">
+                        <button data-filter="all" class="filter-btn active active-all px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-100 text-slate-600">
+                            Todos
+                        </button>
+                        <button data-filter="expired" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap bg-white text-slate-500 hover:text-red-600">
+                            <span class="w-2 h-2 rounded-full bg-red-500 inline-block mr-1"></span> Vencidos
+                        </button>
+                        <button data-filter="warning" class="filter-btn px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap bg-white text-slate-500 hover:text-amber-600">
+                            <span class="w-2 h-2 rounded-full bg-amber-500 inline-block mr-1"></span> A Vencer
+                        </button>
+                    </div>
                     
-                    <div class="grid grid-cols-2 gap-3 mt-4">
+                    <div class="grid grid-cols-2 gap-3">
                          <button id="show-add-product-modal-btn" class="col-span-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-900 transition-all flex items-center justify-center shadow-lg shadow-slate-900/10">
                             <ion-icon name="add-circle-outline" class="mr-2 text-lg"></ion-icon>
                             Cadastrar Produto
@@ -164,7 +188,7 @@
                             Backup
                         </button>
                         
-                        <!-- NOVO BOTÃO LIMPAR TUDO -->
+                        <!-- BOTÃO LIMPAR TUDO -->
                         <button id="clear-all-btn" class="col-span-2 mt-1 bg-white border border-red-200 text-red-600 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-red-50 hover:border-red-300 transition-all flex items-center justify-center group">
                             <ion-icon name="trash-bin-outline" class="mr-2 text-lg group-hover:scale-110 transition-transform"></ion-icon>
                             Limpar Este Setor
@@ -575,6 +599,7 @@
             currentWarehouse: 'doces',
             selectedCode: null,
             searchTerm: '',
+            filterStatus: 'all', // 'all', 'expired', 'warning'
             warehouses: {
                 doces: [],
                 salgados: [],
@@ -592,6 +617,7 @@
             placeholder: document.getElementById('details-placeholder'),
             search: document.getElementById('search-bar'),
             tabs: document.querySelectorAll('.warehouse-tab'),
+            filterBtns: document.querySelectorAll('.filter-btn'),
             toastContainer: document.getElementById('toast-container'),
             reportBody: document.getElementById('report-table-body'),
             discardBody: document.getElementById('discard-report-table-body'),
@@ -632,6 +658,14 @@
             if(p2.length === 3) return new Date(p2[2], p2[1]-1, p2[0]);
             return new Date();
         }
+        const getDaysLeft = (validityStr) => {
+            if (!validityStr) return 999;
+            const today = new Date(); 
+            today.setHours(0,0,0,0);
+            const valDate = parseDate(validityStr);
+            const diff = valDate - today;
+            return Math.ceil(diff / (1000 * 60 * 60 * 24));
+        }
         
         // STORAGE
         const save = () => localStorage.setItem('almox_data_v2', JSON.stringify(state));
@@ -653,11 +687,37 @@
             const items = state.warehouses[state.currentWarehouse] || [];
             
             const filtered = items.filter(i => {
+                // Search term filter
                 const term = state.searchTerm.toLowerCase();
-                return i.desc.toLowerCase().includes(term) || 
+                const matchesSearch = i.desc.toLowerCase().includes(term) || 
                        i.code.toLowerCase().includes(term) || 
                        i.lotes.some(l => l.id.toLowerCase().includes(term));
+
+                // Date status filter
+                let matchesFilter = true;
+                if (state.filterStatus === 'expired') {
+                    matchesFilter = i.lotes.some(l => getDaysLeft(l.validity) < 0);
+                } else if (state.filterStatus === 'warning') {
+                    matchesFilter = i.lotes.some(l => {
+                        const d = getDaysLeft(l.validity);
+                        return d >= 0 && d <= 30;
+                    });
+                }
+
+                return matchesSearch && matchesFilter;
             });
+
+            // Update filter counts buttons text
+            const countExpired = items.filter(i => i.lotes.some(l => getDaysLeft(l.validity) < 0)).length;
+            const countWarning = items.filter(i => i.lotes.some(l => { const d = getDaysLeft(l.validity); return d >= 0 && d <= 30; })).length;
+            
+            // Update button texts safely
+            const btnExpired = document.querySelector('button[data-filter="expired"]');
+            if(btnExpired) btnExpired.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 inline-block mr-1"></span> Vencidos (${countExpired})`;
+            
+            const btnWarning = document.querySelector('button[data-filter="warning"]');
+            if(btnWarning) btnWarning.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 inline-block mr-1"></span> A Vencer (${countWarning})`;
+
 
             if(filtered.length === 0) {
                 els.list.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm">Nenhum item encontrado.</div>`;
@@ -678,16 +738,8 @@
                 // New Logic for Expiration Warning in List
                 let expBadge = '';
                 if (item.lotes.length > 0) {
-                    const today = new Date(); 
-                    today.setHours(0,0,0,0);
-                    
                     // Find the most critical expiration date
-                    const daysList = item.lotes.map(l => {
-                        const valDate = parseDate(l.validity);
-                        const diff = valDate - today;
-                        return Math.ceil(diff / (1000 * 60 * 60 * 24));
-                    });
-                    
+                    const daysList = item.lotes.map(l => getDaysLeft(l.validity));
                     const minDays = Math.min(...daysList);
 
                     if (minDays < 0) {
@@ -776,10 +828,7 @@
                     <div class="grid grid-cols-1 gap-4">
                         ${item.lotes.length === 0 ? '<div class="p-8 text-center bg-white rounded-xl border border-dashed border-slate-300"><p class="text-slate-400">Nenhum lote cadastrado.</p></div>' : ''}
                         ${item.lotes.map(lot => {
-                            const today = new Date(); today.setHours(0,0,0,0);
-                            const valDate = parseDate(lot.validity);
-                            const diffTime = valDate - today;
-                            const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            const daysLeft = getDaysLeft(lot.validity);
                             
                             // Visual Logic for Expiration
                             let dateBgClass, dateTextClass, dateBorderClass, dateIcon, dateLabel, dateDisplay, statusColorClass, indicatorColor;
@@ -917,6 +966,31 @@
             renderList();
             renderDetails();
         }
+
+        // Filter Logic (Event Listeners)
+        els.filterBtns.forEach(btn => {
+            btn.onclick = () => {
+                // Update active state class
+                els.filterBtns.forEach(b => {
+                    b.classList.remove('active-all', 'active-expired', 'active-warning', 'bg-slate-800', 'text-white');
+                    // Reset standard styles
+                    b.className = b.className.replace('active', '').trim();
+                    b.classList.add('bg-white', 'text-slate-500'); 
+                });
+
+                // Set new active
+                const filter = btn.dataset.filter;
+                state.filterStatus = filter;
+                
+                // Add specific active class based on filter type
+                btn.classList.remove('bg-white', 'text-slate-500');
+                if(filter === 'all') btn.classList.add('active', 'active-all');
+                else if(filter === 'expired') btn.classList.add('active', 'active-expired');
+                else if(filter === 'warning') btn.classList.add('active', 'active-warning');
+
+                renderList();
+            };
+        });
 
         // ACTIONS LOGIC
         
