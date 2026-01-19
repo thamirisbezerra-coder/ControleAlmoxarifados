@@ -675,15 +675,42 @@
                 else if(item.lotes.some(l => l.status === 'Baixo')) statusColor = 'bg-amber-50 text-amber-600 border-amber-100';
                 else if(total > 0) statusColor = 'bg-emerald-50 text-emerald-600 border-emerald-100';
 
+                // New Logic for Expiration Warning in List
+                let expBadge = '';
+                if (item.lotes.length > 0) {
+                    const today = new Date(); 
+                    today.setHours(0,0,0,0);
+                    
+                    // Find the most critical expiration date
+                    const daysList = item.lotes.map(l => {
+                        const valDate = parseDate(l.validity);
+                        const diff = valDate - today;
+                        return Math.ceil(diff / (1000 * 60 * 60 * 24));
+                    });
+                    
+                    const minDays = Math.min(...daysList);
+
+                    if (minDays < 0) {
+                        expBadge = `<span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-600 border border-red-200" title="Item vencido"><ion-icon name="alert-circle" class="mr-1"></ion-icon> Vencido</span>`;
+                    } else if (minDays === 0) {
+                        expBadge = `<span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-50 text-red-500 border border-red-100" title="Vence hoje"><ion-icon name="warning" class="mr-1"></ion-icon> Hoje</span>`;
+                    } else if (minDays <= 30) {
+                        expBadge = `<span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-600 border border-amber-100" title="Vence em ${minDays} dias"><ion-icon name="time" class="mr-1"></ion-icon> ${minDays}d</span>`;
+                    }
+                }
+
                 const div = document.createElement('div');
                 div.className = `p-4 border-b border-slate-50 hover:bg-slate-50 cursor-pointer transition-all flex justify-between items-center group ${isSelected ? 'selected' : ''}`;
                 div.onclick = () => { state.selectedCode = item.code; render(); };
                 div.innerHTML = `
-                    <div>
-                        <h3 class="font-bold text-slate-700 text-sm group-hover:text-blue-600 transition-colors">${item.desc}</h3>
-                        <p class="text-xs text-slate-400 mt-1">Ref: ${item.code} • ${item.loc}</p>
+                    <div class="flex-grow min-w-0 pr-2">
+                        <div class="flex items-center">
+                            <h3 class="font-bold text-slate-700 text-sm group-hover:text-blue-600 transition-colors truncate">${item.desc}</h3>
+                            ${expBadge}
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1 truncate">Ref: ${item.code} • ${item.loc}</p>
                     </div>
-                    <div class="text-right">
+                    <div class="text-right shrink-0">
                         <span class="block font-bold text-slate-800">${parseFloat(total.toFixed(2))} <span class="text-xs font-normal text-slate-500">${unit}</span></span>
                         <span class="inline-block mt-1 px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wide ${statusColor}">${total > 0 ? 'Disponível' : 'Esgotado'}</span>
                     </div>
@@ -1458,6 +1485,7 @@
     </script>
 </body>
 </html>
+
 
 
 
