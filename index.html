@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Almoxarifado</title>
+    <title>Controle de Almoxarifado (Online)</title>
     <!-- Carregando o Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Importando ícones Ionicons -->
@@ -115,7 +115,13 @@
                 <img src="https://i.postimg.cc/76mXWMJh/as-02.png" alt="Logo" class="h-10 w-auto mr-4 object-contain">
                 <div>
                     <h1 class="text-xl font-bold text-slate-800 tracking-tight">Controle de Almoxarifado</h1>
-                    <p class="text-xs text-slate-500 font-medium">Gestão Inteligente de Estoque</p>
+                    <div class="flex items-center space-x-2">
+                        <p class="text-xs text-slate-500 font-medium">Gestão Inteligente de Estoque</p>
+                        <!-- Indicador de Status Online -->
+                        <span id="connection-status" class="hidden px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wide flex items-center">
+                            <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse"></span> Online
+                        </span>
+                    </div>
                 </div>
             </div>
             
@@ -161,7 +167,7 @@
                         <ion-icon name="search-outline" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors"></ion-icon>
                     </div>
 
-                    <!-- NOVO: Filtros de Validade -->
+                    <!-- Filtros de Validade -->
                     <div class="flex space-x-2 mb-4 overflow-x-auto pb-1" id="filter-container">
                         <button data-filter="all" class="filter-btn active active-all px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap bg-slate-100 text-slate-600">
                             Todos
@@ -199,6 +205,9 @@
                 <!-- Lista com Scroll -->
                 <div id="item-list" class="flex-grow overflow-y-auto custom-scrollbar bg-white">
                     <!-- Itens via JS -->
+                    <div class="flex items-center justify-center h-full text-slate-400">
+                        <span class="loading-spinner animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full mr-2"></span> Carregando...
+                    </div>
                 </div>
             </div>
 
@@ -593,7 +602,18 @@
     <div id="toast-container" class="fixed top-24 right-6 z-50 space-y-2 pointer-events-none"></div>
 
     <!-- SCRIPTS LÓGICA -->
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // FIREBASE CONFIG
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
         // ESTADO DA APLICAÇÃO
         const state = {
             currentWarehouse: 'doces',
@@ -639,7 +659,10 @@
             prodForm: document.getElementById('product-form'),
             lotForm: document.getElementById('lot-form'),
             withdrawForm: document.getElementById('withdraw-form'),
-            discardForm: document.getElementById('discard-form')
+            discardForm: document.getElementById('discard-form'),
+            
+            // Status Indicator
+            connectionStatus: document.getElementById('connection-status')
         };
 
         // HELPERS
@@ -667,17 +690,63 @@
             return Math.ceil(diff / (1000 * 60 * 60 * 24));
         }
         
-        // STORAGE
-        const save = () => localStorage.setItem('almox_data_v2', JSON.stringify(state));
-        const load = () => {
-            const data = localStorage.getItem('almox_data_v2');
-            if(data) {
-                const p = JSON.parse(data);
-                state.warehouses = p.warehouses || state.warehouses;
-                state.historyWithdraw = p.historyWithdraw || [];
-                state.historyDiscard = p.historyDiscard || [];
+        // --- FIREBASE LOGIC ---
+        
+        // 1. Auth
+        async function initAuth() {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
             }
-        };
+        }
+
+        // 2. Realtime Listener
+        function initRealtimeData() {
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'almoxarifado_shared', 'main_state');
+
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    // Merge Data (Preserve UI State like selectedCode)
+                    state.warehouses = data.warehouses || { doces: [], salgados: [], materiaPrima: [] };
+                    state.historyWithdraw = data.historyWithdraw || [];
+                    state.historyDiscard = data.historyDiscard || [];
+                    state.notifications = data.notifications || []; // Shared notifications? OK.
+
+                    // Update UI
+                    render();
+                    if(els.connectionStatus) els.connectionStatus.classList.remove('hidden');
+                } else {
+                    // First run, doc doesn't exist yet. Initialize it.
+                    save(); 
+                }
+            }, (error) => {
+                console.error("Sync Error:", error);
+                // toast("Erro na conexão.", "error");
+            });
+        }
+
+        // 3. Save Function (Writes to Cloud)
+        async function save() {
+            if (!auth.currentUser) return;
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'almoxarifado_shared', 'main_state');
+
+            const dataToSave = {
+                warehouses: state.warehouses,
+                historyWithdraw: state.historyWithdraw,
+                historyDiscard: state.historyDiscard,
+                notifications: state.notifications
+            };
+
+            try {
+                await setDoc(docRef, dataToSave);
+            } catch (e) {
+                console.error("Save Error:", e);
+                toast("Erro ao salvar.", "error");
+            }
+        }
 
         // CORE FUNCTIONS
         
@@ -1534,7 +1603,9 @@
         };
         
         // Load & Start
-        load();
+        initAuth().then(() => {
+            initRealtimeData();
+        });
         
         // NOVO: Verifica se o botão de ajuda deve pulsar e adiciona listeners com segurança
         if (els.showHelpBtn) {
