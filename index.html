@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Almoxarifado (Online)</title>
+    <title>Controle de Almoxarifado (Conectado)</title>
     <!-- Carregando o Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Importando ícones Ionicons -->
@@ -608,11 +608,22 @@
         import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // FIREBASE CONFIG
-        const firebaseConfig = JSON.parse(__firebase_config);
+        // Use user's config if available, otherwise use preview environment config
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyAqgHANmbw0wbvuTB8PrEIkvrUQhyh41Tk",
+            authDomain: "controleprodutossalas.firebaseapp.com",
+            projectId: "controleprodutossalas",
+            storageBucket: "controleprodutossalas.firebasestorage.app",
+            messagingSenderId: "961706450894",
+            appId: "1:961706450894:web:385133e94015e2474b559f",
+            measurementId: "G-C4FMGD6V60"
+        };
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // Fallback for appId if running outside preview env
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'controle-estoque-default';
 
         // ESTADO DA APLICAÇÃO
         const state = {
