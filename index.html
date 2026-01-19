@@ -880,6 +880,7 @@
          * Helper: Converte data DD/MM/AAAA para um objeto Date.
          */
         function parseDate(dateStr) {
+            if (!dateStr) return new Date();
             const parts = dateStr.split('/');
             if (parts.length === 3) {
                 const [day, month, year] = parts;
@@ -903,10 +904,28 @@
         function parseAndGroupData(csvString) {
             const groupedFlavors = new Map();
             const lines = csvString.trim().split('\n');
+            
+            // DETECÇÃO AUTOMÁTICA DE SEPARADOR
+            // Verifica a primeira linha para decidir entre vírgula, ponto e vírgula ou tab
+            let separator = ',';
+            if (lines.length > 0) {
+                const firstLine = lines[0];
+                const countComma = (firstLine.match(/,/g) || []).length;
+                const countSemi = (firstLine.match(/;/g) || []).length;
+                const countTab = (firstLine.match(/\t/g) || []).length;
+
+                if (countTab > countComma && countTab > countSemi) separator = '\t';
+                else if (countSemi > countComma) separator = ';';
+            }
+            // console.log("Separador detectado:", separator === '\t' ? 'TAB' : separator);
+
+            let successCount = 0;
 
             for (const line of lines) {
-                const parts = line.split(',');
-                // Agora esperamos pelo menos 8 colunas, mas validamos se tem o essencial
+                if (!line.trim()) continue; // Pula linhas vazias
+
+                const parts = line.split(separator);
+                // Agora esperamos pelo menos 4 colunas essenciais
                 if (parts.length < 4) continue; 
 
                 // Mapeamento Novo
@@ -914,25 +933,40 @@
                 const flavorKey = parts[1].trim(); // DESCRIÇÃO
                 const loteIdRaw = parts[2].trim(); // LOTE
                 const quantityRaw = parts[3].trim(); // QUANTIDADE
-                const validadeRaw = parts[5].trim(); // VALIDADE (Índice 5)
+                // Índice 4 é Fabricação
+                const validadeRaw = parts[5] ? parts[5].trim() : ''; // VALIDADE (Índice 5)
                 const statusRaw = parts[7] ? parts[7].trim() : 'OK'; // STATUS (Índice 7)
 
                 // Pular cabeçalho se existir
-                if (flavorCode.toUpperCase() === 'CÓDIGO' || flavorCode.toUpperCase() === 'CODIGO') continue;
+                if (flavorCode.toUpperCase().includes('CÓDIGO') || flavorCode.toUpperCase().includes('CODIGO')) continue;
+
+                // Validação de Data Flexível (Aceita 1/1/2024 e 01/01/2024)
+                // Regex: dia (1-2 digitos) / mes (1-2 digitos) / ano (4 digitos)
+                const dateRegex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+                if (!validadeRaw.match(dateRegex)) {
+                    console.warn(`Lote ${loteIdRaw} ignorado: data inválida (${validadeRaw}).`);
+                    continue;
+                }
+                
+                // Formata a data para garantir DD/MM/AAAA com zeros
+                const matchDate = validadeRaw.match(dateRegex);
+                const day = matchDate[1].padStart(2, '0');
+                const month = matchDate[2].padStart(2, '0');
+                const year = matchDate[3];
+                const cleanDate = `${day}/${month}/${year}`;
+
+                // Limpeza da quantidade (troca vírgula por ponto se necessário para o parseStock funcionar)
+                // Se o separador for ';', é provável que a quantidade use ',' como decimal (ex: 1,5 kg)
+                // O parseStock já lida com vírgulas, mas garantimos que não haja confusão
+                const cleanQuantity = quantityRaw; 
 
                 const lotData = {
                     id: loteIdRaw,
-                    validade: validadeRaw,
-                    estoque: parseStock(quantityRaw),
+                    validade: cleanDate,
+                    estoque: parseStock(cleanQuantity),
                     status: statusRaw,
                     retido: false
                 };
-                
-                // Validação de Lote
-                if (!lotData.validade.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-                    console.warn(`Lote ${lotData.id} ignorado: data de validade inválida (${lotData.validade}). Formato esperado: DD/MM/AAAA`);
-                    continue;
-                }
 
                 if (!groupedFlavors.has(flavorKey)) {
                     // Cria a entrada principal
@@ -947,10 +981,21 @@
                 } else {
                     // Se o aroma já existe, apenas adiciona o lote
                     const existing = groupedFlavors.get(flavorKey);
-                    existing.lotes.push(lotData);
-                    existing.lotes.sort((a, b) => parseDate(a.validade) - parseDate(b.validade));
+                    // Evita duplicar o mesmo lote se rodar o import várias vezes (opcional, mas bom)
+                    if (!existing.lotes.some(l => l.id === lotData.id)) {
+                        existing.lotes.push(lotData);
+                        existing.lotes.sort((a, b) => parseDate(a.validade) - parseDate(b.validade));
+                    }
                 }
+                successCount++;
             }
+            
+            if (successCount === 0 && lines.length > 1) {
+                console.error("Nenhum item importado. Verifique o separador ou formato.");
+                // Opcional: alertar o usuário via throw para ser pego no catch lá embaixo
+                throw new Error("Nenhum dado válido encontrado. Verifique se as colunas estão na ordem correta: CÓDIGO, DESCRIÇÃO, LOTE, QUANTIDADE, FABRICAÇÃO, VALIDADE, DIAS, STATUS.");
+            }
+
             return Array.from(groupedFlavors.values())
                         .sort((a, b) => a.descricao.localeCompare(b.descricao));
         }
