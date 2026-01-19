@@ -501,12 +501,23 @@
     <div id="import-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/60 modal-backdrop"></div>
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6 relative z-10 transform scale-95 opacity-0 transition-all duration-300" id="import-modal-content">
-            <h2 class="text-xl font-bold text-slate-800 mb-2">Importar CSV</h2>
-            <p class="text-xs text-slate-500 mb-4">Cole os dados com as colunas: <br><strong>CÓDIGO, DESCRIÇÃO, LOTE, QUANTIDADE, FABRICAÇÃO, VALIDADE, DIAS, STATUS</strong></p>
+            <h2 class="text-xl font-bold text-slate-800 mb-4">Importar CSV</h2>
+            
+            <!-- NOVO: Seletor de Segmento -->
+            <div class="mb-4">
+                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Destino da Importação</label>
+                <select id="import-segment" class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-sm text-slate-700">
+                    <option value="doces">Aromas Doces</option>
+                    <option value="salgados">Aromas Salgados</option>
+                    <option value="materiaPrima">Matéria Prima</option>
+                </select>
+            </div>
+
+            <p class="text-xs text-slate-500 mb-2">Cole os dados com as colunas: <br><strong>CÓDIGO, DESCRIÇÃO, LOTE, QUANTIDADE, FABRICAÇÃO, VALIDADE, DIAS, STATUS</strong></p>
             <textarea id="csv-input" class="w-full h-40 border border-slate-200 rounded-lg p-3 text-xs font-mono mb-4 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="1001, Aroma Baunilha, L2301, 500 ml, 01/01/2024, 01/01/2026, 365, OK..."></textarea>
             <div class="flex justify-end space-x-3">
                 <button class="close-modal-btn px-4 py-2 text-slate-500 hover:text-slate-800">Cancelar</button>
-                <button id="confirm-import-btn" class="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700">Processar</button>
+                <button id="confirm-import-btn" class="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 shadow-lg shadow-green-600/20 transition-all">Processar Importação</button>
             </div>
         </div>
     </div>
@@ -1105,7 +1116,19 @@
 
         // INIT & IMPORT
         document.getElementById('show-add-product-modal-btn').onclick = () => window.openProductModal();
-        document.getElementById('show-import-modal-btn').onclick = () => showModal('import-modal');
+        
+        // NOVO: Ao abrir modal de importação, pré-seleciona a aba atual
+        document.getElementById('show-import-modal-btn').onclick = () => {
+            const current = state.currentWarehouse;
+            // Se a aba atual for um dos segmentos válidos, seleciona ele
+            if(['doces', 'salgados', 'materiaPrima'].includes(current)) {
+                document.getElementById('import-segment').value = current;
+            }
+            // Limpa o textarea
+            document.getElementById('csv-input').value = '';
+            showModal('import-modal');
+        };
+
         if (els.showHelpBtn) {
             els.showHelpBtn.onclick = () => showModal('help-modal');
         }
@@ -1121,9 +1144,11 @@
              downloadAnchorNode.remove();
         };
 
-        // CSV Import Logic (Robust)
+        // CSV Import Logic (Robust & Segment Aware)
         document.getElementById('confirm-import-btn').onclick = () => {
             const csv = document.getElementById('csv-input').value;
+            const targetSegment = document.getElementById('import-segment').value; // Pega o segmento escolhido
+
             if(!csv) {
                 toast('Por favor, cole os dados para importar.', 'error');
                 return;
@@ -1136,11 +1161,8 @@
             const firstLine = lines[0] || '';
             const sep = firstLine.includes('\t') ? '\t' : (firstLine.includes(';') ? ';' : ',');
 
-            // Usa a aba atual para decidir onde salvar
-            const warehouseName = state.currentWarehouse; 
-            // Garante que o almoxarifado existe (caso esteja em aba de relatório)
-            const targetWarehouse = state.warehouses[warehouseName] ? warehouseName : 'doces';
-            const warehouse = state.warehouses[targetWarehouse];
+            // Define o armazém de destino com base na escolha do usuário
+            const warehouse = state.warehouses[targetSegment];
 
             lines.forEach(l => {
                 if(!l.trim()) return; // Pula linhas vazias
@@ -1225,12 +1247,31 @@
             warehouse.sort((a,b) => a.desc.localeCompare(b.desc));
 
             save();
+            
+            // Muda para a aba onde os dados foram importados para o usuário ver
+            state.currentWarehouse = targetSegment;
+            state.selectedCode = null; // Reseta seleção para evitar erros
+            
+            // Atualiza visual das abas
+            document.querySelectorAll('.warehouse-tab').forEach(t => {
+                if(t.dataset.warehouse === targetSegment) {
+                    t.classList.add('active');
+                } else {
+                    t.classList.remove('active');
+                }
+            });
+            
+            // Se estava em relatório, volta para a visualização principal
+            document.getElementById('main-view-container').classList.remove('hidden');
+            document.getElementById('report-view-container').classList.add('hidden');
+            document.getElementById('discard-report-view-container').classList.add('hidden');
+
             render();
             closeModal('import-modal');
             
-            const whLabel = targetWarehouse === 'doces' ? 'Aromas Doces' : (targetWarehouse === 'salgados' ? 'Aromas Salgados' : 'Matéria Prima');
+            const whLabel = targetSegment === 'doces' ? 'Aromas Doces' : (targetSegment === 'salgados' ? 'Aromas Salgados' : 'Matéria Prima');
             if (count > 0) {
-                toast(`${count} registros processados em ${whLabel}.`, 'success');
+                toast(`${count} registros importados em ${whLabel}.`, 'success');
             } else {
                 toast('Nenhum dado válido encontrado. Verifique o formato.', 'warning');
             }
